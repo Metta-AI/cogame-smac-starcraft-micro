@@ -218,15 +218,19 @@ proc cogEntries(payload: JsonNode): seq[tuple[id: string, node: JsonNode]] =
   let node = payload{"cogs"}
   if node.isNil:
     return @[]
+  ## Every id is capped at MaxCogIdRunes on a RUNE boundary first: it is
+  ## model-authored and otherwise unbounded, and the matcher below runs
+  ## `endsWith` over it in both directions. The cap clears the longest alias
+  ## this game issues, so no real id is cut into a mismatch.
   if node.kind == JArray:
     for item in node:
       if item.kind == JObject:
-        result.add((item{"id"}.getStr(), item))
+        result.add((item{"id"}.getStr().truncateRunes(MaxCogIdRunes), item))
   elif node.kind == JObject:
     for key, item in node:
       if item.kind == JObject:
-        let id = if item{"id"}.getStr().len > 0: item{"id"}.getStr() else: key
-        result.add((id, item))
+        let raw = if item{"id"}.getStr().len > 0: item{"id"}.getStr() else: key
+        result.add((raw.truncateRunes(MaxCogIdRunes), item))
 
 proc parseSquadDirective*(
   payload: JsonNode,
