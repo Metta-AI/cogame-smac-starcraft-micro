@@ -156,7 +156,11 @@ proc record(outPath: string): SimServer =
   var sim = initSimServer(config)
   sim.gameEventLoggingEnabled = false
   sim.seatSquad()
-  sim.startGame()
+  ## NO startGame() here: the sim's own `stepLobby` starts the battle on the
+  ## first step, which is exactly what playback does from the recorded joins. A
+  ## recorder that starts the game itself runs one tick ahead of every replay of
+  ## its own file, and the fixture page then (correctly) refuses the replay with
+  ## "hash mismatch at tick 1".
   let
     say0 = fixtureSay(0)
     note = fixtureNote()
