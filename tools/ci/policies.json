@@ -1,0 +1,35 @@
+[
+  {
+    "name": "smac-starcraft-micro-marshal",
+    "run": "/bin/smac-starcraft-micro-player",
+    "env": {
+      "PLAYER_PROMPT": "One target at a time, and never lose a ranger.\nEvery turn, compute the kill order yourself: of the enemies in range of anybody\nin the squad, take the one with the LOWEST hp; break ties by the one closest to\nour rangers. That is the target for EVERY unit this turn. Put its id in\ntarget_id and put its id in \"say\", every single turn, even when it has not\nchanged - that is how five separate decisions become one volley.\nIf you are a RANGER: intent \"focus\" on the kill order. If any enemy blade or\nswarm is within 200 pixels of you, switch to \"kite\" this turn instead and put\nthat enemy in target_id: you are worth more alive at 300 pixels than dead at\n50. Never use \"attack_move\"; walking into an army is how a ranger dies.\nIf you are a BLADE: intent \"screen\" while any friendly ranger is alive and any\nmelee enemy is within 300 pixels of it - target the enemy, not the ranger; the\ncontroller works out where to stand. Otherwise \"focus\" the kill order. You have\ntwice a ranger's health: spend it.\nWhen the armies block says theirs.alive is 1, everyone \"focus\" it and finish\nthe battle - a victory is worth twice all the damage shaping combined.\nWhen ours.alive is 1 and theirs.alive is 2 or more, that last unit uses\n\"kite\" every turn and never stops moving: full-time with damage banked scores,\na wipe does not.",
+      "PLAYER_POLICY_LABEL": "marshal"
+    }
+  },
+  {
+    "name": "smac-starcraft-micro-skirmish",
+    "run": "/bin/smac-starcraft-micro-player",
+    "env": {
+      "PLAYER_PROMPT": "Fight at the wall, not in the open, and make them come to you.\nTurn 0 and turn 1, before contact: every unit \"hold\" at a post on OUR side of\nthe map - blades at [430, 250], [430, 330] and [430, 410], rangers at\n[330, 290] and [330, 370]. A tight line means every enemy that arrives is\ninside every one of our weapons at once, and their AI walks into it.\nFrom contact on, the target is the enemy with the SMALLEST dist_px in the\nenemies list - the one that has already committed to us - and everyone names it\nin target_id and in \"say\".\nIf you are a BLADE: \"focus\" that target. Do not chase anything further than 350\npixels away; if the nearest enemy is further than that, \"hold\" your post\ninstead and let it come.\nIf you are a RANGER: \"focus\" the same target, but if your own hp is below half,\n\"retreat\" toward [200, your own y] for one turn and then rejoin. A ranger at\n20 health is one swing from being worth nothing.\nNobody uses \"regroup\" while any enemy is within 250 pixels of anybody.\nWhen the armies block says our hp_pct is more than 25 points above theirs, the\nline is winning: switch every unit to \"attack_move\" on the enemy centroid and\nclose it out before the clock runs down - a full-time draw throws away the win\nweight you have already earned.",
+      "PLAYER_POLICY_LABEL": "skirmish"
+    },
+    "player": "ply_bac48eb1-662e-44f8-973d-f3e016dccf5d"
+  },
+  {
+    "name": "smac-starcraft-micro-focusfire",
+    "run": "/bin/smac-starcraft-micro-player",
+    "env": {
+      "PLAYER_SCRIPTED": "focusfire",
+      "PLAYER_POLICY_LABEL": "focusfire"
+    }
+  },
+  {
+    "name": "smac-starcraft-micro-charge",
+    "run": "/bin/smac-starcraft-micro-player",
+    "env": {
+      "PLAYER_SCRIPTED": "charge",
+      "PLAYER_POLICY_LABEL": "charge"
+    }
+  }
+]

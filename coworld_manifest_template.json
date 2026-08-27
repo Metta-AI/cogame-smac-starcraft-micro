@@ -1,0 +1,1181 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Metta-AI/metta/main/packages/coworld/src/coworld/coworld_manifest_schema.json",
+  "tags": [
+    "micro",
+    "cooperative",
+    "smac",
+    "rts",
+    "combat",
+    "llm",
+    "starcraft"
+  ],
+  "episode_timeout_minutes": 20,
+  "game": {
+    "name": "smac-starcraft-micro",
+    "owner": "daveey",
+    "description": "Five cogs, one unit each, fight a scripted enemy army three times on a fixed arena. The whole squad shares ONE score: how much of the army you destroy, whether you wipe it out, and how much of your own health survives. Focus fire is the whole game.",
+    "replay_viewer": {
+      "bundle": "static-replay-viewer"
+    },
+    "runnable": {
+      "type": "game",
+      "image": "{{SMAC_STARCRAFT_MICRO_IMAGE}}",
+      "run": [
+        "/bin/smac-starcraft-micro"
+      ],
+      "env": {
+        "ANTHROPIC_API_KEY_URI": "secret://coworld/smac-starcraft-micro/anthropic_api_key"
+      },
+      "source_url": "https://github.com/Metta-AI/cogame-smac-starcraft-micro/tree/main"
+    },
+    "config_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tokens",
+        "players"
+      ],
+      "properties": {
+        "tokens": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "string"
+          }
+        },
+        "players": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "slots": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "team": {
+                "type": "string",
+                "enum": [
+                  "red",
+                  "blue"
+                ]
+              }
+            }
+          }
+        },
+        "roles": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "string",
+            "enum": [
+              "ranger",
+              "blade"
+            ]
+          }
+        },
+        "enemyRoles": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 24,
+          "items": {
+            "type": "string",
+            "enum": [
+              "ranger",
+              "blade",
+              "swarm"
+            ]
+          }
+        },
+        "seed": {
+          "type": "integer",
+          "default": 679961
+        },
+        "num_agents": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 5,
+          "default": 5
+        },
+        "minPlayers": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 5,
+          "default": 5
+        },
+        "scenario": {
+          "type": "string",
+          "default": "default"
+        },
+        "loadout": {
+          "type": "string",
+          "default": "micro"
+        },
+        "mapPath": {
+          "type": "string",
+          "default": "arena"
+        },
+        "fogOfWar": {
+          "type": "boolean",
+          "default": false
+        },
+        "fastMode": {
+          "type": "boolean",
+          "default": true
+        },
+        "showPlayerLabels": {
+          "type": "boolean",
+          "default": false
+        },
+        "model": {
+          "type": "string",
+          "default": ""
+        },
+        "maxTicks": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 1440
+        },
+        "maxGames": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 3
+        },
+        "turnTicks": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 120
+        },
+        "turnBudgetMs": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 10000
+        },
+        "attempt1Ms": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 6000
+        },
+        "retryMs": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 3000
+        },
+        "turnSpacingMs": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 12000
+        },
+        "wallClockBudgetSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 690
+        },
+        "lobbyJoinTimeoutTicks": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 2400
+        },
+        "startWaitTicks": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 120
+        },
+        "gameOverTicks": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 72
+        },
+        "friendlySpawnX": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 380
+        },
+        "enemySpawnX": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 855
+        },
+        "spawnSpacingPx": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 44
+        },
+        "spawnJitterPx": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 24
+        },
+        "rangerHp": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 60
+        },
+        "rangerRange": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 380
+        },
+        "rangerDamage": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 4
+        },
+        "rangerCooldown": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 18
+        },
+        "bladeHp": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 120
+        },
+        "bladeSpeedPct": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 115
+        },
+        "bladeReach": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 56
+        },
+        "bladeArcBrads": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 32
+        },
+        "bladeDamage": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 10
+        },
+        "bladeCooldown": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 30
+        },
+        "swingTicks": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 4
+        },
+        "swarmHp": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 30
+        },
+        "swarmSpeedPct": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 130
+        },
+        "swarmReach": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 40
+        },
+        "swarmDamage": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 6
+        },
+        "swarmCooldown": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 24
+        },
+        "aggroPx": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 600
+        },
+        "leashPx": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 700
+        },
+        "retargetTicks": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 48
+        },
+        "enemyStuckTicks": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 24
+        },
+        "rangerStandoff": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 300
+        },
+        "kiteStandoff": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 340
+        },
+        "screenStandoff": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 90
+        },
+        "chaseCapPx": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 520
+        },
+        "panicPx": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 150
+        },
+        "winWeightPermille": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 600
+        },
+        "dmgWeightPermille": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 300
+        },
+        "survWeightPermille": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 100
+        },
+        "creditEpsilonPerMyriad": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 4
+        },
+        "maxOutputTokens": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 900
+        }
+      }
+    },
+    "results_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "names",
+        "scores",
+        "win",
+        "role",
+        "reason",
+        "endRule"
+      ],
+      "properties": {
+        "names": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "string"
+          }
+        },
+        "scores": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "number"
+          }
+        },
+        "win": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "boolean"
+          }
+        },
+        "role": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "string"
+          }
+        },
+        "alias": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "string"
+          }
+        },
+        "damageDealt": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "integer"
+          }
+        },
+        "damageTaken": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "integer"
+          }
+        },
+        "kills": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "integer"
+          }
+        },
+        "deaths": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "integer"
+          }
+        },
+        "shots": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "integer"
+          }
+        },
+        "llmTurns": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "integer"
+          }
+        },
+        "fallbackTurns": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "integer"
+          }
+        },
+        "battleResults": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "items": {
+            "type": "string"
+          }
+        },
+        "battleTicks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "items": {
+            "type": "integer"
+          }
+        },
+        "battleDamagePct": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "items": {
+            "type": "integer"
+          }
+        },
+        "battleLossPct": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "items": {
+            "type": "integer"
+          }
+        },
+        "teamScore": {
+          "type": "number"
+        },
+        "battlesWon": {
+          "type": "integer"
+        },
+        "enemyKilled": {
+          "type": "integer"
+        },
+        "enemyTotal": {
+          "type": "integer"
+        },
+        "scenario": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "deadline",
+            "fault"
+          ]
+        },
+        "endRule": {
+          "type": "string",
+          "enum": [
+            "victory",
+            "wipe",
+            "full_time",
+            "wall_clock",
+            "sim_fault",
+            "host_error"
+          ]
+        },
+        "games": {
+          "type": "integer"
+        },
+        "finalTick": {
+          "type": "integer"
+        },
+        "seed": {
+          "type": "integer"
+        }
+      }
+    },
+    "protocols": {
+      "player": {
+        "type": "text",
+        "value": "# Wire protocol\n\nThree streams, and one of them is the only thing a policy has to understand.\n\n## 1. The player socket (Sprite v1)\n\n`GET /player?slot=N&token=T` upgrades to a websocket carrying the starter's\nSprite v1 binary protocol. The game sends one binary frame per tick; the seat\nsends:\n\n* **ONE chat message (`0x81`) carrying its registration**, re-sent for the first\n  ~10 s of frames:\n\n  ```json\n  {\"type\": \"register\",\n   \"prompt\": \"<strategy text, or empty>\",\n   \"scripted\": \"focusfire\" | \"charge\" | null,\n   \"policy\": \"<free label>\"}\n  ```\n\n  Joins are strictly slot-sequential, so a seat whose slot is not the next open\n  one is not admitted until the lower slots have joined. The server HOLDS an\n  unappliable registration and re-reads it when the slot lands, and this end\n  keeps re-sending it \u2014 registering twice is harmless. A seat that never\n  registers, or registers with neither field, is `focusfire`.\n\n  The prompt is a secret: the server consumes the registration and writes a\n  REDACTED `register` record to the replay carrying the policy label and kind\n  only. Any other chat text from a seat is dropped \u2014 units shout, seats do not.\n\n* **The Ready packet (`0x85`) after every received frame.** This is legitimate\n  here in a way it is not for an ordinary Sprite v1 client: the seat sends NO\n  inputs at all (the server computes every actuator mask), so the dead-reckoning\n  hazard the packet normally causes on a wall-clock-paced server cannot arise,\n  and `fastMode` can advance the tick as soon as every seat has acknowledged the\n  frame.\n\n**A seat sends no inputs.** Every decision reaches the sim as a directive\n(below), compiled by a deterministic server-side control layer.\n\nExit cleanly on a dead socket: the receive loop must be wrapped in\n`try/except`, because a close frame RAISES, and the game's own `quit(0)` can\noutrun the flushed final frame. A naive player exits 1 and fails certification\nintermittently.\n\n## 2. The directive channel (what a policy actually speaks)\n\nEvery `turnTicks` = 120 ticks (5.0 s) the GAME SERVER \u2014 not the player\ncontainer \u2014 builds each seat's view, asks that seat's policy for one order, and\ncompiles the answer into per-tick actuator masks for the next five seconds. All\nfive seats are asked as ONE parallel batch.\n\n### The view the seat is given\n\nMap pixels, integers. Abridged; the full object is built by\n`src/smac/decide.nim`.\n\n```json\n{\"battle\": 2, \"of\": 3, \"scenario\": \"default\",\n \"turn\": 5, \"turns\": 12, \"clock\": {\"played_s\": 25, \"left_s\": 35},\n \"you\": {\"id\": \"RANGER-alpha\", \"role\": \"ranger\", \"alive\": true,\n         \"pos\": [412, 330], \"aim\": 128, \"hp\": 44, \"hp_max\": 60,\n         \"range_px\": 380, \"cooldown_ticks\": 7, \"ready\": false,\n         \"damage_dealt\": 96, \"kills\": 1, \"speed_px_s\": 66},\n \"armies\": {\"ours\": {\"alive\": 4, \"hp\": 301, \"hp_max\": 480, \"hp_pct\": 63},\n            \"theirs\": {\"alive\": 3, \"hp\": 214, \"hp_max\": 480, \"hp_pct\": 45}},\n \"enemies\": [{\"id\": 3, \"name\": \"E3\", \"role\": \"blade\", \"pos\": [640, 302],\n              \"hp\": 34, \"hp_max\": 120, \"dist_px\": 229, \"in_your_range\": true,\n              \"attacking\": \"RANGER-alpha\", \"focused_by\": 2,\n              \"reach_px\": 56, \"speed_px_s\": 76}],\n \"squad\": [{\"id\": \"BLADE-alpha\", \"role\": \"blade\", \"pos\": [600, 420],\n            \"alive\": true, \"hp\": 88, \"hp_max\": 120, \"damage_dealt\": 140,\n            \"attacking\": \"E3\", \"last_intent\": \"focus\",\n            \"last_note\": \"I body-block for the rangers\", \"last_say\": \"screen\"}],\n \"last_turn\": {\"your_damage\": 24, \"your_shots\": 6, \"team_damage\": 88,\n               \"enemy_kills\": 1, \"our_losses\": 0},\n \"your_last_directive\": \"...\",\n \"score\": {\"team_so_far\": 0.31, \"battles_won\": 0, \"battle_damage_pct\": 55,\n           \"battle_loss_pct\": 37, \"win_weight\": 0.6, \"dmg_weight\": 0.3,\n           \"surv_weight\": 0.1}}\n```\n\n`enemies` is sorted nearest-to-you first and capped at 24 entries.\n\n**Visible:** the whole board. Every living unit on both sides with its position,\naim, role, current and maximum hit points; every enemy's current target and how\nmany of ours are already attacking it; both armies' totals; the other four\nseats' LAST-turn note, say and intent; shouts within 247 px; the battle index,\nthe scenario, the clock, the running team score and the scoring weights.\n\n**Hidden:** the other seats' directives FOR THE TURN BEING DECIDED (all five\ndecide simultaneously \u2014 that is exactly why `say` and `note` matter); every\nseat's `PLAYER_PROMPT`; the identity of any policy; the episode seed; the RNG\nstate and therefore every future spawn and every future shot's aim jitter; the\nenemy AI's internal retarget, leash and stuck counters; and future ticks.\n\n### The reply\n\n```json\n{\"note\": \"everyone on E3, blades screen the rangers\",\n \"cogs\": [{\"id\": \"RANGER-alpha\", \"intent\": \"focus\", \"target_id\": 3,\n           \"target\": [640, 302], \"face\": [700, 300], \"say\": \"E3\"}]}\n```\n\n| field | cap / legal values | repair when violated |\n|---|---|---|\n| `note` | <= 160 runes | truncated on a rune boundary; newlines collapse to spaces |\n| `cogs` | exactly 1 entry \u2014 your own unit | extras dropped; empty/missing keeps last turn's directive, else `focusfire`'s |\n| `cogs[].id` | your own alias, case-insensitive, suffix-tolerant, <= 16 runes | an unmatched entry is assigned by position |\n| `cogs[].intent` | `focus` `attack_move` `kite` `hold` `screen` `retreat` `regroup` | -> `focus` |\n| `cogs[].target_id` | the numeric id of a LIVING enemy | dead/unknown/null -> the living enemy nearest `target` |\n| `cogs[].target` | `[x, y]`, clamped to the map box and snapped to walkable ground | missing/non-finite -> the enemy named by `target_id`, else the army's centroid |\n| `cogs[].face` | `[x, y]` or null | -> null (the control layer picks the aim) |\n| `cogs[].say` | <= 10 runes | truncated, then printable ASCII minus braces; becomes a real in-game SHOUT audible within 247 px |\n\nParsing is TOLERANT: markdown fences are stripped; the outermost balanced\n`{...}` is taken if the model prefixed prose; `cogs` may be an object keyed by\nid; a bare order object without the `cogs` wrapper is accepted; numeric strings\nare accepted for `target_id`/`target`/`face`; `\"E3\"` and `\"e3\"` are accepted\nwhere an integer id was asked for; unknown-case and hyphenated intents are\nnormalised. Only when NO object with at least one usable entry can be recovered\ndo the retry and then the scripted fallback fire.\n\n**Truncation is on RUNE (Unicode codepoint) boundaries, never bytes.** Slicing a\nstring by byte index anywhere on the path to the replay is forbidden: a\nbyte-truncated multi-byte character renders fine in a browser and then fails a\nstrict UTF-8 parser.\n\n### Timing, and the degrade-never-hang contract\n\nAttempt 1 gets a **6000 ms** batch deadline. Any seat that timed out, errored,\nreturned non-JSON or returned no usable entry is retried **once** in a single\nbatch with a **3000 ms** deadline \u2014 worst case 9.0 s inside the **10000 ms**\nper-turn cap. A provider throttle with no other candidate model SKIPS the retry\noutright and fails fast to the scripted layer for that turn. On a second failure\nthe seat plays the `focusfire` directive and a `fallback` record names the cause\n(`timeout`, `parse_error`, `transport_error`, `throttled`, `no_credentials`,\n`budget_guard`).\n\nA **12000 ms** wall-clock floor separates the STARTS of consecutive batches,\nwhich holds the episode at 25 requests/minute. It is a floor, not a sleep on the\ncritical path \u2014 the loop keeps stepping sim ticks while it waits.\n\nAt the start of each turn, if two more full turns would not fit inside the 690 s\nengine budget, the LLM is switched off for the rest of the episode and the\nepisode finishes on the scripted layer, so it ends `complete` rather than\n`deadline`. A `budget_guard` record names the turn it fired.\n\n## 3. The spectator streams\n\n* `GET /global` and `GET /client/global` \u2014 the broadcast board and its JSON\n  chrome frame (scorebug, army bars, feed, transport, endcard).\n* `GET /client/player?slot=N&token=T` \u2014 a real page, registered before any\n  catch-all route, that does NOT open the player socket.\n* `GET /healthz`, `GET /replay-data`, `GET /reward` \u2014 as inherited.\n\nBoth `/client/` routes serve real pages and `/healthz` + `/global` keep\nanswering for a bounded shutdown grace (~20 s) after the artifacts are written.\n\n## 4. The replay\n\nA binary `COWLDSMC` file: magic + format version + game name/version header,\nthe resolved config JSON (seed, `mapSpec`, roster, `roles`, `enemyRoles` and\nevery tuning field), then the record stream \u2014 joins, leaves, per-UNIT input-mask\nchanges for the five friendly units, chat records, and **one `gameHash` per\ntick**.\n\n| `k` | fields |\n|---|---|\n| `register` | `seat`, `alias`, `role`, `policy` (<= 48 runes), `kind`, `baseline` |\n| `directive` | `battle`, `turn`, `seat`, `alias`, `role`, `source`, `latency_ms`, `note`, `cogs[]` |\n| `fallback` | `battle`, `turn`, `seat`, `attempt`, `cause`, `detail` (<= 200 runes) |\n| `budget_guard` | `turn`, `remaining_s` |\n| `stop` | `tick`, `reason`, `endRule` \u2014 the load-bearing wall-clock stop, applied by the SAME proc on record and on playback |\n| `result` | the full results document, written once at episode end |\n\nThe whole serialized `directive` record is capped at 900 runes.\n\n**The entire enemy army is re-derived, never recorded**: its spawn positions come\nfrom the sim RNG seeded by the config seed, and every one of its decisions is a\npure integer function of the sim state. That is why the file stays around 330 KB\nand why a hash mismatch is a real integrity signal rather than a rendering nit.\n\n`tools/replay_summary.py` (Python 3 standard library only) turns the bytes into\none strict-UTF-8 JSON object on stdout for forensics.\n\n## 5. The results document\n\nWritten to `COGAME_RESULTS_URI`. It must equal the manifest's `results_schema`\nkey for key \u2014 that schema is `additionalProperties: false` and the certifier\nrejects any unknown field. See `docs/RULES.md` for what the numbers mean.\n\nThe twelve seat-indexed arrays (`names`, `scores`, `win`, `role`, `alias`,\n`damageDealt`, `damageTaken`, `kills`, `deaths`, `shots`, `llmTurns`,\n`fallbackTurns`) have exactly five entries. The four battle-indexed arrays\n(`battleResults`, `battleTicks`, `battleDamagePct`, `battleLossPct`) have\nbetween one and six.\n\n`names` are the REAL policy names (spectator side). `alias` and `role` carry the\nin-game names, which are the only names a seat, a prompt or a shout ever sees.\n"
+      },
+      "global": {
+        "type": "text",
+        "value": "# Wire protocol\n\nThree streams, and one of them is the only thing a policy has to understand.\n\n## 1. The player socket (Sprite v1)\n\n`GET /player?slot=N&token=T` upgrades to a websocket carrying the starter's\nSprite v1 binary protocol. The game sends one binary frame per tick; the seat\nsends:\n\n* **ONE chat message (`0x81`) carrying its registration**, re-sent for the first\n  ~10 s of frames:\n\n  ```json\n  {\"type\": \"register\",\n   \"prompt\": \"<strategy text, or empty>\",\n   \"scripted\": \"focusfire\" | \"charge\" | null,\n   \"policy\": \"<free label>\"}\n  ```\n\n  Joins are strictly slot-sequential, so a seat whose slot is not the next open\n  one is not admitted until the lower slots have joined. The server HOLDS an\n  unappliable registration and re-reads it when the slot lands, and this end\n  keeps re-sending it \u2014 registering twice is harmless. A seat that never\n  registers, or registers with neither field, is `focusfire`.\n\n  The prompt is a secret: the server consumes the registration and writes a\n  REDACTED `register` record to the replay carrying the policy label and kind\n  only. Any other chat text from a seat is dropped \u2014 units shout, seats do not.\n\n* **The Ready packet (`0x85`) after every received frame.** This is legitimate\n  here in a way it is not for an ordinary Sprite v1 client: the seat sends NO\n  inputs at all (the server computes every actuator mask), so the dead-reckoning\n  hazard the packet normally causes on a wall-clock-paced server cannot arise,\n  and `fastMode` can advance the tick as soon as every seat has acknowledged the\n  frame.\n\n**A seat sends no inputs.** Every decision reaches the sim as a directive\n(below), compiled by a deterministic server-side control layer.\n\nExit cleanly on a dead socket: the receive loop must be wrapped in\n`try/except`, because a close frame RAISES, and the game's own `quit(0)` can\noutrun the flushed final frame. A naive player exits 1 and fails certification\nintermittently.\n\n## 2. The directive channel (what a policy actually speaks)\n\nEvery `turnTicks` = 120 ticks (5.0 s) the GAME SERVER \u2014 not the player\ncontainer \u2014 builds each seat's view, asks that seat's policy for one order, and\ncompiles the answer into per-tick actuator masks for the next five seconds. All\nfive seats are asked as ONE parallel batch.\n\n### The view the seat is given\n\nMap pixels, integers. Abridged; the full object is built by\n`src/smac/decide.nim`.\n\n```json\n{\"battle\": 2, \"of\": 3, \"scenario\": \"default\",\n \"turn\": 5, \"turns\": 12, \"clock\": {\"played_s\": 25, \"left_s\": 35},\n \"you\": {\"id\": \"RANGER-alpha\", \"role\": \"ranger\", \"alive\": true,\n         \"pos\": [412, 330], \"aim\": 128, \"hp\": 44, \"hp_max\": 60,\n         \"range_px\": 380, \"cooldown_ticks\": 7, \"ready\": false,\n         \"damage_dealt\": 96, \"kills\": 1, \"speed_px_s\": 66},\n \"armies\": {\"ours\": {\"alive\": 4, \"hp\": 301, \"hp_max\": 480, \"hp_pct\": 63},\n            \"theirs\": {\"alive\": 3, \"hp\": 214, \"hp_max\": 480, \"hp_pct\": 45}},\n \"enemies\": [{\"id\": 3, \"name\": \"E3\", \"role\": \"blade\", \"pos\": [640, 302],\n              \"hp\": 34, \"hp_max\": 120, \"dist_px\": 229, \"in_your_range\": true,\n              \"attacking\": \"RANGER-alpha\", \"focused_by\": 2,\n              \"reach_px\": 56, \"speed_px_s\": 76}],\n \"squad\": [{\"id\": \"BLADE-alpha\", \"role\": \"blade\", \"pos\": [600, 420],\n            \"alive\": true, \"hp\": 88, \"hp_max\": 120, \"damage_dealt\": 140,\n            \"attacking\": \"E3\", \"last_intent\": \"focus\",\n            \"last_note\": \"I body-block for the rangers\", \"last_say\": \"screen\"}],\n \"last_turn\": {\"your_damage\": 24, \"your_shots\": 6, \"team_damage\": 88,\n               \"enemy_kills\": 1, \"our_losses\": 0},\n \"your_last_directive\": \"...\",\n \"score\": {\"team_so_far\": 0.31, \"battles_won\": 0, \"battle_damage_pct\": 55,\n           \"battle_loss_pct\": 37, \"win_weight\": 0.6, \"dmg_weight\": 0.3,\n           \"surv_weight\": 0.1}}\n```\n\n`enemies` is sorted nearest-to-you first and capped at 24 entries.\n\n**Visible:** the whole board. Every living unit on both sides with its position,\naim, role, current and maximum hit points; every enemy's current target and how\nmany of ours are already attacking it; both armies' totals; the other four\nseats' LAST-turn note, say and intent; shouts within 247 px; the battle index,\nthe scenario, the clock, the running team score and the scoring weights.\n\n**Hidden:** the other seats' directives FOR THE TURN BEING DECIDED (all five\ndecide simultaneously \u2014 that is exactly why `say` and `note` matter); every\nseat's `PLAYER_PROMPT`; the identity of any policy; the episode seed; the RNG\nstate and therefore every future spawn and every future shot's aim jitter; the\nenemy AI's internal retarget, leash and stuck counters; and future ticks.\n\n### The reply\n\n```json\n{\"note\": \"everyone on E3, blades screen the rangers\",\n \"cogs\": [{\"id\": \"RANGER-alpha\", \"intent\": \"focus\", \"target_id\": 3,\n           \"target\": [640, 302], \"face\": [700, 300], \"say\": \"E3\"}]}\n```\n\n| field | cap / legal values | repair when violated |\n|---|---|---|\n| `note` | <= 160 runes | truncated on a rune boundary; newlines collapse to spaces |\n| `cogs` | exactly 1 entry \u2014 your own unit | extras dropped; empty/missing keeps last turn's directive, else `focusfire`'s |\n| `cogs[].id` | your own alias, case-insensitive, suffix-tolerant, <= 16 runes | an unmatched entry is assigned by position |\n| `cogs[].intent` | `focus` `attack_move` `kite` `hold` `screen` `retreat` `regroup` | -> `focus` |\n| `cogs[].target_id` | the numeric id of a LIVING enemy | dead/unknown/null -> the living enemy nearest `target` |\n| `cogs[].target` | `[x, y]`, clamped to the map box and snapped to walkable ground | missing/non-finite -> the enemy named by `target_id`, else the army's centroid |\n| `cogs[].face` | `[x, y]` or null | -> null (the control layer picks the aim) |\n| `cogs[].say` | <= 10 runes | truncated, then printable ASCII minus braces; becomes a real in-game SHOUT audible within 247 px |\n\nParsing is TOLERANT: markdown fences are stripped; the outermost balanced\n`{...}` is taken if the model prefixed prose; `cogs` may be an object keyed by\nid; a bare order object without the `cogs` wrapper is accepted; numeric strings\nare accepted for `target_id`/`target`/`face`; `\"E3\"` and `\"e3\"` are accepted\nwhere an integer id was asked for; unknown-case and hyphenated intents are\nnormalised. Only when NO object with at least one usable entry can be recovered\ndo the retry and then the scripted fallback fire.\n\n**Truncation is on RUNE (Unicode codepoint) boundaries, never bytes.** Slicing a\nstring by byte index anywhere on the path to the replay is forbidden: a\nbyte-truncated multi-byte character renders fine in a browser and then fails a\nstrict UTF-8 parser.\n\n### Timing, and the degrade-never-hang contract\n\nAttempt 1 gets a **6000 ms** batch deadline. Any seat that timed out, errored,\nreturned non-JSON or returned no usable entry is retried **once** in a single\nbatch with a **3000 ms** deadline \u2014 worst case 9.0 s inside the **10000 ms**\nper-turn cap. A provider throttle with no other candidate model SKIPS the retry\noutright and fails fast to the scripted layer for that turn. On a second failure\nthe seat plays the `focusfire` directive and a `fallback` record names the cause\n(`timeout`, `parse_error`, `transport_error`, `throttled`, `no_credentials`,\n`budget_guard`).\n\nA **12000 ms** wall-clock floor separates the STARTS of consecutive batches,\nwhich holds the episode at 25 requests/minute. It is a floor, not a sleep on the\ncritical path \u2014 the loop keeps stepping sim ticks while it waits.\n\nAt the start of each turn, if two more full turns would not fit inside the 690 s\nengine budget, the LLM is switched off for the rest of the episode and the\nepisode finishes on the scripted layer, so it ends `complete` rather than\n`deadline`. A `budget_guard` record names the turn it fired.\n\n## 3. The spectator streams\n\n* `GET /global` and `GET /client/global` \u2014 the broadcast board and its JSON\n  chrome frame (scorebug, army bars, feed, transport, endcard).\n* `GET /client/player?slot=N&token=T` \u2014 a real page, registered before any\n  catch-all route, that does NOT open the player socket.\n* `GET /healthz`, `GET /replay-data`, `GET /reward` \u2014 as inherited.\n\nBoth `/client/` routes serve real pages and `/healthz` + `/global` keep\nanswering for a bounded shutdown grace (~20 s) after the artifacts are written.\n\n## 4. The replay\n\nA binary `COWLDSMC` file: magic + format version + game name/version header,\nthe resolved config JSON (seed, `mapSpec`, roster, `roles`, `enemyRoles` and\nevery tuning field), then the record stream \u2014 joins, leaves, per-UNIT input-mask\nchanges for the five friendly units, chat records, and **one `gameHash` per\ntick**.\n\n| `k` | fields |\n|---|---|\n| `register` | `seat`, `alias`, `role`, `policy` (<= 48 runes), `kind`, `baseline` |\n| `directive` | `battle`, `turn`, `seat`, `alias`, `role`, `source`, `latency_ms`, `note`, `cogs[]` |\n| `fallback` | `battle`, `turn`, `seat`, `attempt`, `cause`, `detail` (<= 200 runes) |\n| `budget_guard` | `turn`, `remaining_s` |\n| `stop` | `tick`, `reason`, `endRule` \u2014 the load-bearing wall-clock stop, applied by the SAME proc on record and on playback |\n| `result` | the full results document, written once at episode end |\n\nThe whole serialized `directive` record is capped at 900 runes.\n\n**The entire enemy army is re-derived, never recorded**: its spawn positions come\nfrom the sim RNG seeded by the config seed, and every one of its decisions is a\npure integer function of the sim state. That is why the file stays around 330 KB\nand why a hash mismatch is a real integrity signal rather than a rendering nit.\n\n`tools/replay_summary.py` (Python 3 standard library only) turns the bytes into\none strict-UTF-8 JSON object on stdout for forensics.\n\n## 5. The results document\n\nWritten to `COGAME_RESULTS_URI`. It must equal the manifest's `results_schema`\nkey for key \u2014 that schema is `additionalProperties: false` and the certifier\nrejects any unknown field. See `docs/RULES.md` for what the numbers mean.\n\nThe twelve seat-indexed arrays (`names`, `scores`, `win`, `role`, `alias`,\n`damageDealt`, `damageTaken`, `kills`, `deaths`, `shots`, `llmTurns`,\n`fallbackTurns`) have exactly five entries. The four battle-indexed arrays\n(`battleResults`, `battleTicks`, `battleDamagePct`, `battleLossPct`) have\nbetween one and six.\n\n`names` are the REAL policy names (spectator side). `alias` and `role` carry the\nin-game names, which are the only names a seat, a prompt or a shout ever sees.\n"
+      }
+    },
+    "docs": {
+      "readme": {
+        "type": "text",
+        "value": "# smac-starcraft-micro\n\n**Five cogs fight a scripted army three times, and the squad's score is one\nnumber.**\n\nEach of the five seats commands exactly ONE unit. Your five spawn in a column on\nthe west side of a fixed 1235 x 659 arena; a scripted enemy army spawns 475\npixels east of them \u2014 just outside a ranger's weapon range, so the very first\ndecision is a real one. Both sides walk, shoot and swing under the same physics.\nNothing regenerates and nothing respawns: a unit that dies is out for the rest of\nthat battle. A battle that kills the whole enemy army with anybody left alive is\na **victory**, and an episode is three battles long.\n\nEverybody's score is the same score.\n\n```\nper battle:  0.60 x won  +  0.30 x (damage dealt / enemy pool)\n                         +  0.10 x (1 - damage taken / our pool)\nteamScore = mean over the three battles          ->  [0, 1], higher is better\n```\n\nA perfect episode \u2014 three victories with no damage taken \u2014 is exactly 1.000.\nThree wipes with no damage dealt is exactly 0.000. Every seat reports the same\n`teamScore`; the only per-seat term is a tie-break worth at most 0.0004, which\nis deliberately smaller than one ranger shot of squad damage. Farming personal\ncredit loses more than it can gain.\n\n## The three skills, none of them coded\n\n* **Focus fire.** Five units on one enemy kill it in about three seconds. Five\n  units on five different enemies kill nothing in the same window, and a dead\n  enemy stops shooting back forever. Every enemy carries a numeric id (`E3`);\n  naming it in `target_id` and shouting it in `say` is how five simultaneous\n  decisions become one volley.\n* **Kiting.** A ranger out-ranges a blade 380 px to 56 px but is 10 px/s slower.\n  Backing off while the weapon cools is free damage \u2014 until the arena wall\n  arrives.\n* **Screening.** A blade that stands between the enemy and a ranger is the only\n  thing that buys the ranger those seconds. A dead ranger deals no damage for\n  the rest of the battle.\n\n## A policy is just a prompt\n\nEvery five seconds each seat issues ONE order for its own unit, in a fixed JSON\ngrammar, and a deterministic controller executes it at tick rate for the next\nfive seconds \u2014 it walks the unit around walls, turns it to face what you asked,\nand pulls the trigger when the shot will land. You never touch a motor or a\ntrigger directly.\n\n```json\n{\"note\": \"everyone on E3, blades screen the rangers\",\n \"cogs\": [{\"id\": \"RANGER-alpha\", \"intent\": \"focus\", \"target_id\": 3,\n           \"target\": [640, 302], \"face\": [700, 300], \"say\": \"E3\"}]}\n```\n\nIntents: `focus`, `attack_move`, `kite`, `hold`, `screen`, `retreat`, `regroup`.\n`docs/COMMANDING.md` explains what each one compiles to and what a good prompt\nsays.\n\nTwo scripted baselines ship in the same image, selected by environment variable\nrather than by code: `focusfire` (the published default, the certification\nplayer and the per-turn fallback) and `charge` (deliberately weaker, and\ndifferent in SHAPE so the ladder gets a spread). Both are documented in\n`docs/RULES.md`, so cooperating with a scripted partner means cooperating with a\npartner whose rules you know.\n\n```bash\ncoworld upload-policy coworld-smac-starcraft-micro \\\n  --name my-smac --run /bin/smac-starcraft-micro-player \\\n  --secret-env PLAYER_PROMPT=\"<your strategy>\"\n```\n\n## Four scenarios\n\n| id | squad | enemy army | enemy pool |\n|---|---|---|---|\n| `default` | 2 rangers, 3 blades | 2 rangers, 3 blades | 480 |\n| `outnumbered` | 5 rangers | 6 rangers | 360 |\n| `corridor` | 5 blades | 20 swarm | 600 |\n| `heavy` | 2 rangers, 3 blades | 3 rangers, 4 blades | 660 |\n\nThey are this repo's adaptations of the SMAC shapes **2s3z**, **5m_vs_6m**,\n**corridor** and **3s5z_vs_3s6z**. There is **no OpenBW, no Brood War binary, no\nBWAPI and no Blizzard asset** anywhere in this repo, and **no bit-exact parity\nwith SMAC, SMACv2 or SMAX is claimed or tested** \u2014 see `docs/SCENARIOS.md`.\n\n## Watching\n\nThe replay is a static WebAssembly bundle: the same Nim sim module compiled to\nwasm re-derives every frame in the browser from the recorded per-unit actuator\nmasks and checks a hash every tick. The whole enemy army \u2014 every spawn, every\ntarget choice, every swing \u2014 is re-derived from the seed rather than recorded,\nwhich is why a hash mismatch is a real integrity signal and why the file stays\naround 330 KB.\n\nThe board shows two army-strength bars (the bars ARE the score), five seat\nplates with each policy's real name and damage dealt, an animated focus ring\nwhenever two or more of your units are shooting the same enemy, per-unit health\nbars, a first-person view down a ranger's barrel, and a match feed that prints\nthe commander's own line every turn \u2014 which is where a spectator sees the LLM\nplaying.\n\n## Repo tour\n\n| path | what |\n|---|---|\n| `src/smac/` | the sim: units, the scripted enemy army, the scenario layer, the decision layer, the server |\n| `src/smac_starcraft_micro.nim` | the game server entrypoint (`/bin/smac-starcraft-micro`) |\n| `src/smac_starcraft_micro_player.nim` | the thin seat registrar (`/bin/smac-starcraft-micro-player`) |\n| `client/` | the broadcast chrome |\n| `replay-viewer/` | the emscripten entry for the static wasm bundle |\n| `docs/` | rules, scenarios, protocol, prompt guide, and the design note |\n| `tests/` | the Nim suite CI runs in debug and release |\n"
+      },
+      "pages": [
+        {
+          "id": "rules",
+          "title": "Rules",
+          "content": {
+            "type": "text",
+            "value": "# Rules\n\nEverything the sim does, in the order it does it. Every number here is a config\nfield, and every shipped variant leaves it at the value printed below.\n\n## The board\n\nThe hand-tuned `arena` map: **1235 x 659** map pixels, fixed geometry, pinned\ninto the replay's config as `mapSpec`. No procedural terrain. The obstacles are\nexactly the cover that makes line of sight matter, and the four spinning centre\ndiamonds are live geometry that movement, bullets and vision all resolve\nagainst.\n\n`TargetFps` = `ReplayFps` = **24**. One **battle** is `maxTicks` = **1440**\nticks = 60 s. One **episode** is `maxGames` = **3** battles. The map, the seed\nand the connected seats are identical across the three; the sim RNG stream\nsimply continues, so each battle's spawn jitter differs and all three are\nre-derivable from the one recorded seed.\n\nDecision turns: `turnTicks` = **120** ticks = 5.0 s, i.e. **12 turns per\nbattle, 36 per episode**.\n\n## Seats and units\n\n`num_agents` = **5**. One seat = one unit. No seat commands more than one body\nand no body is uncommanded.\n\nSeat -> role comes from the variant's `roles` array (length 5, always). A unit's\nanonymous in-game name is `<ROLE>-<identity>`, where the identity is ranked\namong the seats that share the role: `RANGER-alpha`, `RANGER-beta`,\n`BLADE-alpha`, `BLADE-beta`, `BLADE-gamma`.\n\nAll five seats are on the **Red** side. The enemy army is **Blue** and holds no\nseats. An enemy's in-game name is `E<id>` with ids assigned 1..n in spawn order\nand stable for that battle. Those ids are the whole point of the command\ngrammar: `\"target_id\": 3` is how a commander says *everybody shoot E3*.\n\n## The units\n\nCommon to every unit: body 34 px drawn / 13 px footprint, one life, no respawn,\nno healing, no regeneration, aim decoupled from movement at 5 brads/tick, and\nthe starter's acceleration / friction / slide-collision model unchanged.\n\n| | `ranger` | `blade` | `swarm` (enemy only) |\n|---|---|---|---|\n| max hp | 60 | 120 | 30 |\n| speed | 2.75 px/tick (66 px/s) | 3.16 px/tick (~76 px/s) | 3.57 px/tick (~86 px/s) |\n| weapon | hitscan shot | arc swing | arc swing |\n| range / reach | 380 px | 56 px, +-45 deg | 40 px, +-45 deg |\n| damage | 4 | 10 | 6 |\n| cooldown | 18 ticks (0.75 s) | 30 ticks (1.25 s) | 24 ticks (1.0 s) |\n| windup | 5 ticks, aim locked at the trigger pull | swing lit 4 ticks at the aim it was thrown at | same |\n| dps | 5.33 | 8.0 | 6.0 |\n| line of sight | required | required | required |\n\nThe ranger's shot is a real hitscan weapon with a released-shot aim jitter\ncalibrated off its own range and a silhouette exposure test: a fully visible\nbody is hit about 80 % of the time at maximum range and about 99 % at half\nrange. Cover is partial, not binary \u2014 a corner-hugger can only be hit on the\nsliver of body it actually shows.\n\nThe blade's swing damages every living unit of the OTHER side inside the\nreach/half-angle wedge with a clear line, **at most once per activation**\nacross all four lit ticks.\n\n**There is no friendly fire.** A shot passes through friendly bodies and a swing\nignores them.\n\n**Time to kill.** Five of ours focus-firing one enemy blade (120 hp) kill it in\nabout 3.5 s; one enemy ranger (60 hp) in about 1.7 s. Five of ours each shooting\na different enemy kill nothing in the same window. A lone ranger needs 22.5 s of\nuninterrupted fire to kill a blade while the blade needs 7.5 s of contact to\nkill the ranger.\n\n## Spawns\n\nAt the start of each battle:\n\n1. Our five are placed in a column at `friendlySpawnX` = **380**, centred on\n   `y = 329`, `spawnSpacingPx` = **44** px apart, in seat order.\n2. The enemy army is placed the same way at `enemySpawnX` = **855**, in\n   enemy-id order.\n3. Every unit takes an integer jitter `(dx, dy)`, each drawn independently from\n   the sim RNG in `[-24, +24]`, and is snapped to the nearest pixel at which the\n   13 px footprint is clear floor (bounded to a 96 px ring; if nothing is clear\n   the un-jittered point is used).\n\nThe two lines start **475 px** apart \u2014 just outside a ranger's 380 px range.\n\n## The enemy army \u2014 the published script\n\nThe enemy is **inside the sim**, hashed, integer-only and deterministic. It runs\nonce per tick, in enemy-id order:\n\n1. **Target selection.** Each living enemy keeps a current target. It keeps that\n   target while the target is alive and within `leashPx` = **700 px**.\n   Otherwise, and in any case every `retargetTicks` = **48** ticks, it picks the\n   living friendly unit with the smallest integer squared distance that is\n   within `aggroPx` = **600 px** and has a clear line; ties break to the lowest\n   seat index. A retarget only replaces a LIVE current target if the candidate\n   is at least 1.5x closer \u2014 hysteresis, so an enemy does not oscillate between\n   two units standing side by side.\n2. **Movement.** With a target: step directly toward it at the unit's speed,\n   through the same wall-slide collision our units use. Without one: step toward\n   the friendly spawn anchor.\n3. **Stuck escape.** An enemy whose position is unchanged for `enemyStuckTicks`\n   = **24** consecutive ticks rotates its step vector a quarter turn clockwise\n   for the next 12 ticks.\n4. **Attack.** If the target is inside range/reach and the aim error is inside\n   24 brads with a clear line, it fires (ranger) or swings (blade/swarm) under\n   the same weapon rules as ours, and its cooldown starts. Otherwise it turns\n   toward the target at 5 brads/tick.\n\nThe composition is config, not code: `enemyRoles` is an array of 1..24 role\nnames, and the four shipped scenarios are four values of that one field. There\nis **one difficulty level**.\n\n## Tick order\n\n1. Turn boundary: the directives collected for this turn become each seat's\n   active directive and one `directive` record per seat is written to the\n   replay. A directive is EXCLUDED from `gameHash` \u2014 nothing a commander says\n   can move the hash chain, only the masks it produces.\n2. The control layer compiles one `uint8` actuator mask per living friendly unit.\n3. Those five masks go to `sim.step` and to the replay, indexed by unit. **This\n   is the determinism boundary.**\n4. The centre diamonds turn.\n5. Roster-driven transitions.\n6. Playing:\n   1. Per unit: decrement cooldowns and windups, apply movement and aim, and\n      start a windup (ranger) or queue a swing (blade) on a fresh A press.\n   2. The scripted army decides, in enemy-id order, before any damage lands.\n   3. Every shot that releases this tick resolves against ONE snapshot taken\n      before any of them apply, so unit order confers no advantage.\n   4. Every lit swing resolves.\n   5. Damage applies; hp floors at 0; a unit at 0 hp is dead for the battle.\n      **Damage credited to the scoreboard is clipped to the victim's remaining\n      hp** \u2014 overkill is never banked.\n   6. Both armies' totals and the per-enemy focus count are recomputed.\n   7. The sim guard runs (below).\n   8. The battle end conditions are evaluated **in this order**: our army wiped\n      -> `wipe`; else enemy army wiped -> `victory`; else 1440 ticks ->\n      `full_time`. A tick that annihilates both sides is a `wipe`.\n   9. FX pruning and shout expiry.\n7. One `gameHash` per tick is written to the replay.\n\n## The sim guard\n\nEvery tick, before a battle can be ended on the numbers it checks: every living\nunit's centre is inside the map box and on non-wall floor; the alive counts\nequal full recounts; every unit's hp is in `[0, maxHp]` and a unit with 0 hp is\nnot alive; the per-unit damage ledgers sum to the battle totals; the battle\ntotals never exceed the starting pools; and the roster is exactly\n`5 + len(enemyRoles)` units. A trip ends the episode `fault` / `sim_fault` and\nthe squad is scored from what it actually banked.\n\n## Scoring\n\n```\nper battle b (only battles that actually started):\n  dmgFrac_b  = damage our units applied to the enemy, overkill clipped\n               / sum of the enemy army's max hp at spawn        -> [0, 1]\n  lossFrac_b = damage the enemy applied to us, overkill clipped\n               / sum of our max hp at spawn                     -> [0, 1]\n  won_b      = 1 if every enemy died AND >= 1 of ours is alive, else 0\n  battle_b   = 0.60*won_b + 0.30*dmgFrac_b + 0.10*(1 - lossFrac_b)\n\nteamScore = (sum over battles played of battle_b) / 3           -> [0, 1]\ncredit[s] = 0.0004 * dmgDealt[s] / max(1, sum of dmgDealt)\nscores[s] = teamScore + credit[s]\nwin[s]    = (teamScore >= 0.5)          -- the same boolean for all five seats\n```\n\nHigher is better and no term is ever negative. A victory always scores at least\n0.90 for that battle (because `dmgFrac == 1` follows from it) and a wipe always\nscores at most 0.30. `teamScore` is **identical for all five seats** \u2014 that is\nthe cooperative pin, stated as an equation.\n\n## End conditions\n\n`results.reason` is a closed enum of exactly three values; `results.endRule`\ncarries the detail of the LAST battle played and is a closed enum of exactly\nsix.\n\n| `reason` | `endRule` | when |\n|---|---|---|\n| `complete` | `victory` | the last battle ended with every enemy dead and at least one of ours alive |\n| `complete` | `wipe` | the last battle ended with all five of ours dead (this covers mutual annihilation) |\n| `complete` | `full_time` | the last battle ran its 1440 ticks with both sides standing |\n| `deadline` | `wall_clock` | the 690 s engine budget elapsed; battles already finished keep their value, the battle in progress banks its damage with `won = 0`, battles never started score 0 |\n| `fault` | `sim_fault` | the sim guard tripped |\n| `fault` | `host_error` | an unexpected server-side exception |\n\nA seat that never connects does **not** end the episode: after 2400 lobby ticks\nthe no-show is reported to the platform, its unit is driven by the `focusfire`\nbaseline for the whole episode, and all three battles play out.\n\n## The two published scripted baselines\n\n**`focusfire`** \u2014 the certification player, the per-turn LLM fallback, the\ndriver of a no-show seat, and the default for a seat that registers with\nneither `PLAYER_PROMPT` nor `PLAYER_SCRIPTED`. Every governed unit derives the\n**same** kill order from state alone, so five independent seats converge on one\ntarget without communicating:\n\n1. Rank the living enemies by, in order: (a) inside 420 px of any living\n   friendly unit before everything else; (b) current hp ascending; (c) integer\n   squared distance to our squad centroid ascending; (d) enemy id ascending.\n2. A living **ranger** issues `focus` on the kill order \u2014 unless a living melee\n   enemy is within `panicPx` = **150 px** of it, in which case it issues `kite`\n   with that enemy as `target_id`.\n3. A living **blade** issues `screen` when at least one friendly ranger is alive\n   and some melee enemy is within 260 px of that ranger; otherwise `focus` on\n   the kill order.\n4. With no living enemy: everyone `regroup`.\n\n**`charge`** \u2014 the second filler, deliberately weaker and different in SHAPE:\nevery unit issues `attack_move` at the living enemy nearest **itself**, every\nturn. Nobody kites, nobody screens, nobody shares a target, so the squad splits\nits damage across the whole army and loses the trade.\n\n## What is NOT modelled\n\nNo friendly fire, no respawns, no healing, no hit-point regeneration, no more\nthan one life. No stim, blink, medivacs, cloaking, splash damage, air units or\nupgrades. No production, resources or bases \u2014 this is micro at tick rate. No fog\nof war: the board is fully observable. No enemy difficulty ladder. No procedural\nterrain.\n"
+          }
+        },
+        {
+          "id": "scenarios",
+          "title": "Scenarios and their SMAC lineage",
+          "content": {
+            "type": "text",
+            "value": "# Scenarios and their SMAC lineage\n\n## No OpenBW, no Blizzard assets, no parity claim\n\nThis coworld implements SMAC-style micro combat **natively on the coworld-ctf\nengine**. To be explicit, because the source idea framed the game as a mod of an\nOpenBW wrapper:\n\n* There is **no OpenBW**, no StarCraft: Brood War binary, no BWAPI, no Blizzard\n  data files, no Blizzard art, no `.rep` replays and no OpenBW rendering\n  anywhere in this repository or in the image it builds.\n* There is **no dependency on `Metta-AI/coworld-bw`**, on PySC2, on the SMAC\n  package or on JaxMARL/SMAX. The idea itself sanctions the dependency-free\n  route.\n* **No bit-exact parity with SMAC, SMACv2 or SMAX is claimed or tested.** No\n  numerical, action-space or reward-curve parity. The unit classes (`ranger`,\n  `blade`, `swarm`) are this repo's own and the numbers are tuned here.\n* The replay is rendered by our own static WebAssembly viewer, never by OpenBW.\n\nWhat IS carried over is the *shape* of the scenarios: a small fixed squad\nagainst a scripted enemy army of fixed composition, ranged units that kite,\nmelee units that body-block, focus fire as the decisive skill, and a shared win\nreward with damage shaping.\n\n## The four shipped scenarios\n\nA scenario is a value of two config fields \u2014 `roles` (always five entries) and\n`enemyRoles` (1..24 entries). Nothing else changes: the map, the seat count, the\nclock, the weapons and the scoring are identical, and every damage term divides\nby that scenario's own starting pool, so a harder scenario is genuinely harder\nto score on rather than differently scaled.\n\n### `default` \u2014 Micro \u2014 two and three\n\n`roles` = 2 x ranger, 3 x blade. `enemyRoles` = the same five. Enemy pool 480 hp\nagainst our 480.\n\n**Lineage: SMAC 2s3z.** The smallest squad in which focus fire, kiting and\nbody-blocking are all live decisions at once \u2014 two ranged units that must be\nprotected and three melee units that can do the protecting. This is the variant\nthe league ranks.\n\nFull-contact squad dps is 34.6 against 480 enemy hp, i.e. about 14 s of perfect\ncontact, which in practice lands battles at 25-45 s inside the 60 s clock.\n\n### `outnumbered` \u2014 Micro \u2014 five against six\n\n`roles` = 5 x ranger. `enemyRoles` = 6 x ranger. Enemy pool 360 hp against our\n300.\n\n**Lineage: SMAC 5m_vs_6m.** Nobody can body-block, because nobody has the health\nto. The only way to win the trade is to kill faster than you are killed: one\ntarget at a time, and back off while the weapon cools. Every unit out-ranges\nnothing, so positioning is entirely about who is inside whose 380 px.\n\n### `corridor` \u2014 Micro \u2014 the corridor\n\n`roles` = 5 x blade. `enemyRoles` = 20 x swarm. Enemy pool 600 hp against our\n600.\n\n**Lineage: SMAC corridor.** Twenty-five bodies on the board. The swarm units are\nfast (86 px/s) and fragile (30 hp), and they pick the closest thing they can see\nand walk at it. A blade that steps out of the line is surrounded by four of them\nand dies; five blades holding a line in a doorway kill them one at a time. This\nis the scenario that tests whether a commander can make its unit STOP.\n\n### `heavy` \u2014 Micro \u2014 outgunned\n\n`roles` = 2 x ranger, 3 x blade. `enemyRoles` = 3 x ranger, 4 x blade. Enemy\npool 660 hp against our 480.\n\n**Lineage: SMAC 3s5z_vs_3s6z.** Outgunned by 38 %. A victory here needs perfect\nfocus fire from the opening volley; a full-time draw with 70 % damage banked is\na real result and scores like one (0.30 x 0.70 + 0.10 x survival). The variant\nexists to make the damage-shaping term matter on its own, rather than only as a\nconsolation for a lost battle.\n\n## Adding a scenario\n\nAdd a variant to `coworld_manifest_template.json` with a new `scenario` id and a\nnew `enemyRoles` array. That is the whole change: no code, no new art, no new\ntests beyond `tests/test_manifest.nim`, which already builds and steps EVERY\nvariant's `game_config` (the collab-cooking scar \u2014 testing only the certification\nfixture is how a 25-unit roster ships broken).\n\nThe seat-count pin bounds every scenario at five units on our side, and\n`enemyRoles` is bounded at 24 entries by `config_schema`, so no variant can\nschedule an unbounded army.\n\n## Out of scope for v1\n\nSMACv2's randomised unit *types* per episode and its free-form start positions\nare v0.2 \u2014 `roles` and `enemyRoles` are already the right shape for a generator\nto write into, and the seeded +-24 px spawn jitter is the whole of the\nrandomisation today. The other twenty-odd SMAC scenarios are `enemyRoles` values\naway and cost nothing but variants. SMAC's built-in-AI difficulty ladder is not\nmodelled: this ships one script, and it is published in `docs/RULES.md` so a\nprompt can be written against it.\n"
+          }
+        },
+        {
+          "id": "protocol",
+          "title": "Wire protocol",
+          "content": {
+            "type": "text",
+            "value": "# Wire protocol\n\nThree streams, and one of them is the only thing a policy has to understand.\n\n## 1. The player socket (Sprite v1)\n\n`GET /player?slot=N&token=T` upgrades to a websocket carrying the starter's\nSprite v1 binary protocol. The game sends one binary frame per tick; the seat\nsends:\n\n* **ONE chat message (`0x81`) carrying its registration**, re-sent for the first\n  ~10 s of frames:\n\n  ```json\n  {\"type\": \"register\",\n   \"prompt\": \"<strategy text, or empty>\",\n   \"scripted\": \"focusfire\" | \"charge\" | null,\n   \"policy\": \"<free label>\"}\n  ```\n\n  Joins are strictly slot-sequential, so a seat whose slot is not the next open\n  one is not admitted until the lower slots have joined. The server HOLDS an\n  unappliable registration and re-reads it when the slot lands, and this end\n  keeps re-sending it \u2014 registering twice is harmless. A seat that never\n  registers, or registers with neither field, is `focusfire`.\n\n  The prompt is a secret: the server consumes the registration and writes a\n  REDACTED `register` record to the replay carrying the policy label and kind\n  only. Any other chat text from a seat is dropped \u2014 units shout, seats do not.\n\n* **The Ready packet (`0x85`) after every received frame.** This is legitimate\n  here in a way it is not for an ordinary Sprite v1 client: the seat sends NO\n  inputs at all (the server computes every actuator mask), so the dead-reckoning\n  hazard the packet normally causes on a wall-clock-paced server cannot arise,\n  and `fastMode` can advance the tick as soon as every seat has acknowledged the\n  frame.\n\n**A seat sends no inputs.** Every decision reaches the sim as a directive\n(below), compiled by a deterministic server-side control layer.\n\nExit cleanly on a dead socket: the receive loop must be wrapped in\n`try/except`, because a close frame RAISES, and the game's own `quit(0)` can\noutrun the flushed final frame. A naive player exits 1 and fails certification\nintermittently.\n\n## 2. The directive channel (what a policy actually speaks)\n\nEvery `turnTicks` = 120 ticks (5.0 s) the GAME SERVER \u2014 not the player\ncontainer \u2014 builds each seat's view, asks that seat's policy for one order, and\ncompiles the answer into per-tick actuator masks for the next five seconds. All\nfive seats are asked as ONE parallel batch.\n\n### The view the seat is given\n\nMap pixels, integers. Abridged; the full object is built by\n`src/smac/decide.nim`.\n\n```json\n{\"battle\": 2, \"of\": 3, \"scenario\": \"default\",\n \"turn\": 5, \"turns\": 12, \"clock\": {\"played_s\": 25, \"left_s\": 35},\n \"you\": {\"id\": \"RANGER-alpha\", \"role\": \"ranger\", \"alive\": true,\n         \"pos\": [412, 330], \"aim\": 128, \"hp\": 44, \"hp_max\": 60,\n         \"range_px\": 380, \"cooldown_ticks\": 7, \"ready\": false,\n         \"damage_dealt\": 96, \"kills\": 1, \"speed_px_s\": 66},\n \"armies\": {\"ours\": {\"alive\": 4, \"hp\": 301, \"hp_max\": 480, \"hp_pct\": 63},\n            \"theirs\": {\"alive\": 3, \"hp\": 214, \"hp_max\": 480, \"hp_pct\": 45}},\n \"enemies\": [{\"id\": 3, \"name\": \"E3\", \"role\": \"blade\", \"pos\": [640, 302],\n              \"hp\": 34, \"hp_max\": 120, \"dist_px\": 229, \"in_your_range\": true,\n              \"attacking\": \"RANGER-alpha\", \"focused_by\": 2,\n              \"reach_px\": 56, \"speed_px_s\": 76}],\n \"squad\": [{\"id\": \"BLADE-alpha\", \"role\": \"blade\", \"pos\": [600, 420],\n            \"alive\": true, \"hp\": 88, \"hp_max\": 120, \"damage_dealt\": 140,\n            \"attacking\": \"E3\", \"last_intent\": \"focus\",\n            \"last_note\": \"I body-block for the rangers\", \"last_say\": \"screen\"}],\n \"last_turn\": {\"your_damage\": 24, \"your_shots\": 6, \"team_damage\": 88,\n               \"enemy_kills\": 1, \"our_losses\": 0},\n \"your_last_directive\": \"...\",\n \"score\": {\"team_so_far\": 0.31, \"battles_won\": 0, \"battle_damage_pct\": 55,\n           \"battle_loss_pct\": 37, \"win_weight\": 0.6, \"dmg_weight\": 0.3,\n           \"surv_weight\": 0.1}}\n```\n\n`enemies` is sorted nearest-to-you first and capped at 24 entries.\n\n**Visible:** the whole board. Every living unit on both sides with its position,\naim, role, current and maximum hit points; every enemy's current target and how\nmany of ours are already attacking it; both armies' totals; the other four\nseats' LAST-turn note, say and intent; shouts within 247 px; the battle index,\nthe scenario, the clock, the running team score and the scoring weights.\n\n**Hidden:** the other seats' directives FOR THE TURN BEING DECIDED (all five\ndecide simultaneously \u2014 that is exactly why `say` and `note` matter); every\nseat's `PLAYER_PROMPT`; the identity of any policy; the episode seed; the RNG\nstate and therefore every future spawn and every future shot's aim jitter; the\nenemy AI's internal retarget, leash and stuck counters; and future ticks.\n\n### The reply\n\n```json\n{\"note\": \"everyone on E3, blades screen the rangers\",\n \"cogs\": [{\"id\": \"RANGER-alpha\", \"intent\": \"focus\", \"target_id\": 3,\n           \"target\": [640, 302], \"face\": [700, 300], \"say\": \"E3\"}]}\n```\n\n| field | cap / legal values | repair when violated |\n|---|---|---|\n| `note` | <= 160 runes | truncated on a rune boundary; newlines collapse to spaces |\n| `cogs` | exactly 1 entry \u2014 your own unit | extras dropped; empty/missing keeps last turn's directive, else `focusfire`'s |\n| `cogs[].id` | your own alias, case-insensitive, suffix-tolerant, <= 16 runes | an unmatched entry is assigned by position |\n| `cogs[].intent` | `focus` `attack_move` `kite` `hold` `screen` `retreat` `regroup` | -> `focus` |\n| `cogs[].target_id` | the numeric id of a LIVING enemy | dead/unknown/null -> the living enemy nearest `target` |\n| `cogs[].target` | `[x, y]`, clamped to the map box and snapped to walkable ground | missing/non-finite -> the enemy named by `target_id`, else the army's centroid |\n| `cogs[].face` | `[x, y]` or null | -> null (the control layer picks the aim) |\n| `cogs[].say` | <= 10 runes | truncated, then printable ASCII minus braces; becomes a real in-game SHOUT audible within 247 px |\n\nParsing is TOLERANT: markdown fences are stripped; the outermost balanced\n`{...}` is taken if the model prefixed prose; `cogs` may be an object keyed by\nid; a bare order object without the `cogs` wrapper is accepted; numeric strings\nare accepted for `target_id`/`target`/`face`; `\"E3\"` and `\"e3\"` are accepted\nwhere an integer id was asked for; unknown-case and hyphenated intents are\nnormalised. Only when NO object with at least one usable entry can be recovered\ndo the retry and then the scripted fallback fire.\n\n**Truncation is on RUNE (Unicode codepoint) boundaries, never bytes.** Slicing a\nstring by byte index anywhere on the path to the replay is forbidden: a\nbyte-truncated multi-byte character renders fine in a browser and then fails a\nstrict UTF-8 parser.\n\n### Timing, and the degrade-never-hang contract\n\nAttempt 1 gets a **6000 ms** batch deadline. Any seat that timed out, errored,\nreturned non-JSON or returned no usable entry is retried **once** in a single\nbatch with a **3000 ms** deadline \u2014 worst case 9.0 s inside the **10000 ms**\nper-turn cap. A provider throttle with no other candidate model SKIPS the retry\noutright and fails fast to the scripted layer for that turn. On a second failure\nthe seat plays the `focusfire` directive and a `fallback` record names the cause\n(`timeout`, `parse_error`, `transport_error`, `throttled`, `no_credentials`,\n`budget_guard`).\n\nA **12000 ms** wall-clock floor separates the STARTS of consecutive batches,\nwhich holds the episode at 25 requests/minute. It is a floor, not a sleep on the\ncritical path \u2014 the loop keeps stepping sim ticks while it waits.\n\nAt the start of each turn, if two more full turns would not fit inside the 690 s\nengine budget, the LLM is switched off for the rest of the episode and the\nepisode finishes on the scripted layer, so it ends `complete` rather than\n`deadline`. A `budget_guard` record names the turn it fired.\n\n## 3. The spectator streams\n\n* `GET /global` and `GET /client/global` \u2014 the broadcast board and its JSON\n  chrome frame (scorebug, army bars, feed, transport, endcard).\n* `GET /client/player?slot=N&token=T` \u2014 a real page, registered before any\n  catch-all route, that does NOT open the player socket.\n* `GET /healthz`, `GET /replay-data`, `GET /reward` \u2014 as inherited.\n\nBoth `/client/` routes serve real pages and `/healthz` + `/global` keep\nanswering for a bounded shutdown grace (~20 s) after the artifacts are written.\n\n## 4. The replay\n\nA binary `COWLDSMC` file: magic + format version + game name/version header,\nthe resolved config JSON (seed, `mapSpec`, roster, `roles`, `enemyRoles` and\nevery tuning field), then the record stream \u2014 joins, leaves, per-UNIT input-mask\nchanges for the five friendly units, chat records, and **one `gameHash` per\ntick**.\n\n| `k` | fields |\n|---|---|\n| `register` | `seat`, `alias`, `role`, `policy` (<= 48 runes), `kind`, `baseline` |\n| `directive` | `battle`, `turn`, `seat`, `alias`, `role`, `source`, `latency_ms`, `note`, `cogs[]` |\n| `fallback` | `battle`, `turn`, `seat`, `attempt`, `cause`, `detail` (<= 200 runes) |\n| `budget_guard` | `turn`, `remaining_s` |\n| `stop` | `tick`, `reason`, `endRule` \u2014 the load-bearing wall-clock stop, applied by the SAME proc on record and on playback |\n| `result` | the full results document, written once at episode end |\n\nThe whole serialized `directive` record is capped at 900 runes.\n\n**The entire enemy army is re-derived, never recorded**: its spawn positions come\nfrom the sim RNG seeded by the config seed, and every one of its decisions is a\npure integer function of the sim state. That is why the file stays around 330 KB\nand why a hash mismatch is a real integrity signal rather than a rendering nit.\n\n`tools/replay_summary.py` (Python 3 standard library only) turns the bytes into\none strict-UTF-8 JSON object on stdout for forensics.\n\n## 5. The results document\n\nWritten to `COGAME_RESULTS_URI`. It must equal the manifest's `results_schema`\nkey for key \u2014 that schema is `additionalProperties: false` and the certifier\nrejects any unknown field. See `docs/RULES.md` for what the numbers mean.\n\nThe twelve seat-indexed arrays (`names`, `scores`, `win`, `role`, `alias`,\n`damageDealt`, `damageTaken`, `kills`, `deaths`, `shots`, `llmTurns`,\n`fallbackTurns`) have exactly five entries. The four battle-indexed arrays\n(`battleResults`, `battleTicks`, `battleDamagePct`, `battleLossPct`) have\nbetween one and six.\n\n`names` are the REAL policy names (spectator side). `alias` and `role` carry the\nin-game names, which are the only names a seat, a prompt or a shout ever sees.\n"
+          }
+        },
+        {
+          "id": "commanding",
+          "title": "Writing a micro prompt",
+          "content": {
+            "type": "text",
+            "value": "# Writing a micro prompt\n\nA policy here is a prompt. Every five seconds your seat is handed the board and\nasked for ONE order for ONE unit, and a deterministic controller executes that\norder at tick rate until the next turn. You are a commander, not a driver.\n\n## What each intent actually compiles to\n\nKnowing this is most of the skill, because a good order is one whose compiled\nbehaviour is the behaviour you wanted.\n\n| intent | what the controller does for the next 5 s |\n|---|---|\n| `focus` | **blade**: walk to `E*` and swing whenever a body is in the wedge. **ranger**: walk to the first clear point on the 300 px circle around `E*` that has a line to it, and fire whenever the shot will land. |\n| `attack_move` | walk to `target`, attacking whatever comes into range on the way. |\n| `kite` | **ranger**: if the weapon is READY and the nearest enemy is in range with a clear line, STAND STILL and fire; otherwise walk to the point 340 px from that enemy directly away from it. This alternation is shoot-and-scoot. **blade**: reads as `focus` \u2014 it has no range to trade with. |\n| `hold` | stand at `target` and fire at anything in range. |\n| `screen` | stand 90 px in front of the most wounded living friendly RANGER, between it and the nearest enemy. With no living ranger this compiles as `attack_move` on `E*`. |\n| `retreat` | walk to `target`, clamped into our home column, and DO NOT FIRE. |\n| `regroup` | walk to the integer mean of your surviving squadmates' positions. |\n\nTwo rules apply to every intent:\n\n* **The chase cap.** For `focus`, `attack_move` and `screen`, a goal further\n  than 520 px away is pulled back to 520 px along the way. A unit never abandons\n  the squad for half a map on one order.\n* **The trigger is never yours.** A ranger only presses A when some living\n  enemy's PREDICTED centre (led by the 5-tick windup) lies inside the bullet\n  corridor along its aim, inside 380 px, with a clear line. A blade only presses\n  A when a living enemy's centre is inside its 56 px, +-45 degree wedge. A\n  `retreat` order never presses A at all. You cannot waste a shot by asking for\n  one, and you cannot force a shot that will not land.\n\n## The four things that actually win\n\n1. **Name a target id every single turn, even when it has not changed.** All\n   five of you decide at the same instant and cannot see each other's current\n   orders. `target_id` is what makes five decisions one volley, and `say` is\n   what makes the next turn's decisions agree. `focused_by` in the enemies array\n   tells you whether it worked.\n2. **Pick the target by hit points, not by distance.** The enemy closest to\n   dying is the one whose death removes the most future damage. Break ties by\n   whichever is closest to your rangers.\n3. **Keep the rangers alive.** A ranger deals 5.33 dps for the rest of the\n   battle if it lives and 0 if it dies. A blade has twice its health and half\n   its value at range: spend the blade.\n4. **Know what the clock is worth.** A victory is 0.60. All the damage shaping\n   in the world is 0.30. When `theirs.alive` is 1, everyone should be on it.\n   When you cannot win, a full-time draw with damage banked still scores and a\n   wipe does not \u2014 that is when the last unit alive should `kite` forever.\n\n## Reading the score block\n\n`score.team_so_far` is the squad's running number, `battle_damage_pct` and\n`battle_loss_pct` are this battle's two shaping terms, and the three weights are\nhanded to you so a prompt can do the arithmetic itself rather than guess at it.\n`armies.ours.hp_pct` minus `armies.theirs.hp_pct` is the cheapest single measure\nof whether the trade is going your way.\n\n## Prompt shape that works\n\n* Give the model a **rule it can evaluate**, not an aspiration. \"Take the enemy\n  with the lowest hp among those in range of anybody\" is executable; \"focus\n  fire\" is not.\n* **Branch on the role explicitly.** The same prompt runs on a ranger and on a\n  blade, and the two want opposite things at 200 px.\n* **Name the exception.** \"Unless a melee enemy is within 200 pixels of you, in\n  which case kite\" is the difference between a ranger that trades and a ranger\n  that dies.\n* **Say what to do when the battle is decided**, in both directions: closing out\n  a win and salvaging a loss are different orders and both are worth points.\n* Keep it under ~250 words. The board is already in the message; the prompt's\n  job is the policy, not the situation.\n\n## What will get you fallbacks\n\nThe reply must be a single JSON object beginning with `{`, with exactly one\n`cogs` entry \u2014 your own unit. Prose before the object is tolerated, fences are\ntolerated, `\"E3\"` where an integer was asked for is tolerated, and an unknown\nintent is repaired to `focus`. What is NOT recoverable is a reply with no JSON\nobject in it at all: that costs a retry, and a second failure costs the turn.\nThe seat plays the published `focusfire` baseline for that turn, which is not a\ndisaster \u2014 but it is not your policy playing.\n\nCheck `results.fallbackTurns` after an episode. A champion with more fallbacks\nthan LLM turns is a prompt bug, not a platform outage.\n\n## Testing a prompt\n\n```bash\ncoworld upload-policy coworld-smac-starcraft-micro \\\n  --name my-smac --run /bin/smac-starcraft-micro-player \\\n  --secret-env PLAYER_PROMPT=\"<your strategy>\"\n```\n\nThen watch the replay: the match feed prints your `note` every turn and the\nfocus ring on the board shows, as a shape, whether your squad is actually\nconcentrating fire.\n"
+          }
+        }
+      ]
+    }
+  },
+  "player": [
+    {
+      "id": "baseline",
+      "type": "player",
+      "name": "Focus Fire Baseline",
+      "description": "Scripted unit: the whole squad derives one kill order from state, rangers kite when a melee enemy closes, blades screen the rangers.",
+      "image": "{{SMAC_STARCRAFT_MICRO_IMAGE}}",
+      "run": [
+        "/bin/smac-starcraft-micro-player"
+      ],
+      "env": {
+        "PLAYER_SCRIPTED": "focusfire"
+      },
+      "source_url": "https://github.com/Metta-AI/cogame-smac-starcraft-micro/tree/main",
+      "resources": {
+        "requests": {
+          "cpu": "100m",
+          "memory": "64Mi"
+        },
+        "limits": {
+          "cpu": "1"
+        }
+      }
+    }
+  ],
+  "variants": [
+    {
+      "id": "default",
+      "name": "Micro \u2014 two and three",
+      "description": "Two rangers and three blades against a mirror army of the same five units, 480 hit points a side. The league default: the SMAC 2s3z shape, where focus fire, kiting and body-blocking are all live decisions at once. Three 60-second battles; the squad's score is one number and every seat gets it.",
+      "game_config": {
+        "players": [
+          {
+            "name": "Unit A"
+          },
+          {
+            "name": "Unit B"
+          },
+          {
+            "name": "Unit C"
+          },
+          {
+            "name": "Unit D"
+          },
+          {
+            "name": "Unit E"
+          }
+        ],
+        "slots": [
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          }
+        ],
+        "num_agents": 5,
+        "minPlayers": 5,
+        "loadout": "micro",
+        "scenario": "default",
+        "roles": [
+          "ranger",
+          "ranger",
+          "blade",
+          "blade",
+          "blade"
+        ],
+        "enemyRoles": [
+          "ranger",
+          "ranger",
+          "blade",
+          "blade",
+          "blade"
+        ],
+        "seed": 679961,
+        "mapPath": "arena",
+        "fogOfWar": false,
+        "fastMode": true,
+        "showPlayerLabels": false,
+        "maxTicks": 1440,
+        "maxGames": 3,
+        "turnTicks": 120,
+        "turnBudgetMs": 10000,
+        "attempt1Ms": 6000,
+        "retryMs": 3000,
+        "turnSpacingMs": 12000,
+        "wallClockBudgetSeconds": 690,
+        "lobbyJoinTimeoutTicks": 2400,
+        "startWaitTicks": 120,
+        "gameOverTicks": 72,
+        "friendlySpawnX": 380,
+        "enemySpawnX": 855,
+        "spawnSpacingPx": 44,
+        "spawnJitterPx": 24,
+        "rangerHp": 60,
+        "rangerRange": 380,
+        "rangerDamage": 4,
+        "rangerCooldown": 18,
+        "bladeHp": 120,
+        "bladeSpeedPct": 115,
+        "bladeReach": 56,
+        "bladeArcBrads": 32,
+        "bladeDamage": 10,
+        "bladeCooldown": 30,
+        "swingTicks": 4,
+        "swarmHp": 30,
+        "swarmSpeedPct": 130,
+        "swarmReach": 40,
+        "swarmDamage": 6,
+        "swarmCooldown": 24,
+        "aggroPx": 600,
+        "leashPx": 700,
+        "retargetTicks": 48,
+        "enemyStuckTicks": 24,
+        "rangerStandoff": 300,
+        "kiteStandoff": 340,
+        "screenStandoff": 90,
+        "chaseCapPx": 520,
+        "panicPx": 150,
+        "winWeightPermille": 600,
+        "dmgWeightPermille": 300,
+        "survWeightPermille": 100,
+        "creditEpsilonPerMyriad": 4,
+        "maxOutputTokens": 900
+      }
+    },
+    {
+      "id": "outnumbered",
+      "name": "Micro \u2014 five against six",
+      "description": "Five rangers against six. Nobody can body-block, so the only way to win the trade is to kill faster than you are killed: one target at a time, and back off while the weapon cools. Adapted from the SMAC 5m_vs_6m shape.",
+      "game_config": {
+        "players": [
+          {
+            "name": "Unit A"
+          },
+          {
+            "name": "Unit B"
+          },
+          {
+            "name": "Unit C"
+          },
+          {
+            "name": "Unit D"
+          },
+          {
+            "name": "Unit E"
+          }
+        ],
+        "slots": [
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          }
+        ],
+        "num_agents": 5,
+        "minPlayers": 5,
+        "loadout": "micro",
+        "scenario": "outnumbered",
+        "roles": [
+          "ranger",
+          "ranger",
+          "ranger",
+          "ranger",
+          "ranger"
+        ],
+        "enemyRoles": [
+          "ranger",
+          "ranger",
+          "ranger",
+          "ranger",
+          "ranger",
+          "ranger"
+        ],
+        "seed": 679961,
+        "mapPath": "arena",
+        "fogOfWar": false,
+        "fastMode": true,
+        "showPlayerLabels": false,
+        "maxTicks": 1440,
+        "maxGames": 3,
+        "turnTicks": 120,
+        "turnBudgetMs": 10000,
+        "attempt1Ms": 6000,
+        "retryMs": 3000,
+        "turnSpacingMs": 12000,
+        "wallClockBudgetSeconds": 690,
+        "lobbyJoinTimeoutTicks": 2400,
+        "startWaitTicks": 120,
+        "gameOverTicks": 72,
+        "friendlySpawnX": 380,
+        "enemySpawnX": 855,
+        "spawnSpacingPx": 44,
+        "spawnJitterPx": 24,
+        "rangerHp": 60,
+        "rangerRange": 380,
+        "rangerDamage": 4,
+        "rangerCooldown": 18,
+        "bladeHp": 120,
+        "bladeSpeedPct": 115,
+        "bladeReach": 56,
+        "bladeArcBrads": 32,
+        "bladeDamage": 10,
+        "bladeCooldown": 30,
+        "swingTicks": 4,
+        "swarmHp": 30,
+        "swarmSpeedPct": 130,
+        "swarmReach": 40,
+        "swarmDamage": 6,
+        "swarmCooldown": 24,
+        "aggroPx": 600,
+        "leashPx": 700,
+        "retargetTicks": 48,
+        "enemyStuckTicks": 24,
+        "rangerStandoff": 300,
+        "kiteStandoff": 340,
+        "screenStandoff": 90,
+        "chaseCapPx": 520,
+        "panicPx": 150,
+        "winWeightPermille": 600,
+        "dmgWeightPermille": 300,
+        "survWeightPermille": 100,
+        "creditEpsilonPerMyriad": 4,
+        "maxOutputTokens": 900
+      }
+    },
+    {
+      "id": "corridor",
+      "name": "Micro \u2014 the corridor",
+      "description": "Five blades against twenty fast, fragile swarm units. Twenty-five bodies on the board: the squad has to hold a line rather than chase, because a blade that steps out is surrounded. Adapted from the SMAC corridor shape.",
+      "game_config": {
+        "players": [
+          {
+            "name": "Unit A"
+          },
+          {
+            "name": "Unit B"
+          },
+          {
+            "name": "Unit C"
+          },
+          {
+            "name": "Unit D"
+          },
+          {
+            "name": "Unit E"
+          }
+        ],
+        "slots": [
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          }
+        ],
+        "num_agents": 5,
+        "minPlayers": 5,
+        "loadout": "micro",
+        "scenario": "corridor",
+        "roles": [
+          "blade",
+          "blade",
+          "blade",
+          "blade",
+          "blade"
+        ],
+        "enemyRoles": [
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm",
+          "swarm"
+        ],
+        "seed": 679961,
+        "mapPath": "arena",
+        "fogOfWar": false,
+        "fastMode": true,
+        "showPlayerLabels": false,
+        "maxTicks": 1440,
+        "maxGames": 3,
+        "turnTicks": 120,
+        "turnBudgetMs": 10000,
+        "attempt1Ms": 6000,
+        "retryMs": 3000,
+        "turnSpacingMs": 12000,
+        "wallClockBudgetSeconds": 690,
+        "lobbyJoinTimeoutTicks": 2400,
+        "startWaitTicks": 120,
+        "gameOverTicks": 72,
+        "friendlySpawnX": 380,
+        "enemySpawnX": 855,
+        "spawnSpacingPx": 44,
+        "spawnJitterPx": 24,
+        "rangerHp": 60,
+        "rangerRange": 380,
+        "rangerDamage": 4,
+        "rangerCooldown": 18,
+        "bladeHp": 120,
+        "bladeSpeedPct": 115,
+        "bladeReach": 56,
+        "bladeArcBrads": 32,
+        "bladeDamage": 10,
+        "bladeCooldown": 30,
+        "swingTicks": 4,
+        "swarmHp": 30,
+        "swarmSpeedPct": 130,
+        "swarmReach": 40,
+        "swarmDamage": 6,
+        "swarmCooldown": 24,
+        "aggroPx": 600,
+        "leashPx": 700,
+        "retargetTicks": 48,
+        "enemyStuckTicks": 24,
+        "rangerStandoff": 300,
+        "kiteStandoff": 340,
+        "screenStandoff": 90,
+        "chaseCapPx": 520,
+        "panicPx": 150,
+        "winWeightPermille": 600,
+        "dmgWeightPermille": 300,
+        "survWeightPermille": 100,
+        "creditEpsilonPerMyriad": 4,
+        "maxOutputTokens": 900
+      }
+    },
+    {
+      "id": "heavy",
+      "name": "Micro \u2014 outgunned",
+      "description": "The default squad against seven: three enemy rangers and four enemy blades, 660 hit points against our 480. A victory here needs perfect focus fire; a full-time draw with damage banked is a real result. Adapted from the SMAC 3s5z_vs_3s6z shape.",
+      "game_config": {
+        "players": [
+          {
+            "name": "Unit A"
+          },
+          {
+            "name": "Unit B"
+          },
+          {
+            "name": "Unit C"
+          },
+          {
+            "name": "Unit D"
+          },
+          {
+            "name": "Unit E"
+          }
+        ],
+        "slots": [
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          },
+          {
+            "team": "red"
+          }
+        ],
+        "num_agents": 5,
+        "minPlayers": 5,
+        "loadout": "micro",
+        "scenario": "heavy",
+        "roles": [
+          "ranger",
+          "ranger",
+          "blade",
+          "blade",
+          "blade"
+        ],
+        "enemyRoles": [
+          "ranger",
+          "ranger",
+          "ranger",
+          "blade",
+          "blade",
+          "blade",
+          "blade"
+        ],
+        "seed": 679961,
+        "mapPath": "arena",
+        "fogOfWar": false,
+        "fastMode": true,
+        "showPlayerLabels": false,
+        "maxTicks": 1440,
+        "maxGames": 3,
+        "turnTicks": 120,
+        "turnBudgetMs": 10000,
+        "attempt1Ms": 6000,
+        "retryMs": 3000,
+        "turnSpacingMs": 12000,
+        "wallClockBudgetSeconds": 690,
+        "lobbyJoinTimeoutTicks": 2400,
+        "startWaitTicks": 120,
+        "gameOverTicks": 72,
+        "friendlySpawnX": 380,
+        "enemySpawnX": 855,
+        "spawnSpacingPx": 44,
+        "spawnJitterPx": 24,
+        "rangerHp": 60,
+        "rangerRange": 380,
+        "rangerDamage": 4,
+        "rangerCooldown": 18,
+        "bladeHp": 120,
+        "bladeSpeedPct": 115,
+        "bladeReach": 56,
+        "bladeArcBrads": 32,
+        "bladeDamage": 10,
+        "bladeCooldown": 30,
+        "swingTicks": 4,
+        "swarmHp": 30,
+        "swarmSpeedPct": 130,
+        "swarmReach": 40,
+        "swarmDamage": 6,
+        "swarmCooldown": 24,
+        "aggroPx": 600,
+        "leashPx": 700,
+        "retargetTicks": 48,
+        "enemyStuckTicks": 24,
+        "rangerStandoff": 300,
+        "kiteStandoff": 340,
+        "screenStandoff": 90,
+        "chaseCapPx": 520,
+        "panicPx": 150,
+        "winWeightPermille": 600,
+        "dmgWeightPermille": 300,
+        "survWeightPermille": 100,
+        "creditEpsilonPerMyriad": 4,
+        "maxOutputTokens": 900
+      }
+    }
+  ],
+  "certification": {
+    "players": [
+      {
+        "player_id": "baseline"
+      },
+      {
+        "player_id": "baseline"
+      },
+      {
+        "player_id": "baseline"
+      },
+      {
+        "player_id": "baseline"
+      },
+      {
+        "player_id": "baseline"
+      }
+    ],
+    "game_config": {
+      "players": [
+        {
+          "name": "Unit A"
+        },
+        {
+          "name": "Unit B"
+        },
+        {
+          "name": "Unit C"
+        },
+        {
+          "name": "Unit D"
+        },
+        {
+          "name": "Unit E"
+        }
+      ],
+      "slots": [
+        {
+          "team": "red"
+        },
+        {
+          "team": "red"
+        },
+        {
+          "team": "red"
+        },
+        {
+          "team": "red"
+        },
+        {
+          "team": "red"
+        }
+      ],
+      "roles": [
+        "ranger",
+        "ranger",
+        "blade",
+        "blade",
+        "blade"
+      ],
+      "enemyRoles": [
+        "ranger",
+        "ranger",
+        "blade",
+        "blade",
+        "blade"
+      ],
+      "num_agents": 5,
+      "minPlayers": 5,
+      "loadout": "micro",
+      "scenario": "default",
+      "seed": 679961,
+      "mapPath": "arena",
+      "fogOfWar": false,
+      "maxTicks": 480,
+      "maxGames": 3,
+      "turnTicks": 120,
+      "turnBudgetMs": 10000,
+      "turnSpacingMs": 0,
+      "wallClockBudgetSeconds": 180,
+      "lobbyJoinTimeoutTicks": 1440,
+      "startWaitTicks": 0,
+      "gameOverTicks": 24,
+      "friendlySpawnX": 470,
+      "enemySpawnX": 760,
+      "fastMode": true,
+      "showPlayerLabels": false
+    }
+  }
+}

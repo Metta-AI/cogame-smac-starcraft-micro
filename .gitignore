@@ -1,0 +1,17 @@
+# Build outputs
+nimcache/
+nim.cfg
+dist/
+replay-viewer/dist/
+tests/fixtures/
+*.bitreplay
+*.replay
+smac-starcraft-micro
+smac-starcraft-micro-player
+
+# Editor / OS noise
+.DS_Store
+*.tmp
+tmp/
+out/
+build/

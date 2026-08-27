@@ -1,0 +1,69 @@
+{
+  "loadout": "micro",
+  "scenario": "default",
+  "num_agents": 5,
+  "minPlayers": 5,
+  "maxGames": 3,
+  "maxTicks": 1440,
+  "turnTicks": 120,
+  "mapPath": "arena",
+  "fogOfWar": false,
+  "fastMode": true,
+  "showPlayerLabels": false,
+  "seed": 679961,
+  "roles": [
+    "ranger",
+    "ranger",
+    "blade",
+    "blade",
+    "blade"
+  ],
+  "enemyRoles": [
+    "ranger",
+    "ranger",
+    "blade",
+    "blade",
+    "blade"
+  ],
+  "tokens": [
+    "0xBADA55_0",
+    "0xBADA55_1",
+    "0xBADA55_2",
+    "0xBADA55_3",
+    "0xBADA55_4"
+  ],
+  "players": [
+    {
+      "name": "Unit A"
+    },
+    {
+      "name": "Unit B"
+    },
+    {
+      "name": "Unit C"
+    },
+    {
+      "name": "Unit D"
+    },
+    {
+      "name": "Unit E"
+    }
+  ],
+  "slots": [
+    {
+      "team": "red"
+    },
+    {
+      "team": "red"
+    },
+    {
+      "team": "red"
+    },
+    {
+      "team": "red"
+    },
+    {
+      "team": "red"
+    }
+  ]
+}

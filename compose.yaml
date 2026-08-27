@@ -1,0 +1,8 @@
+services:
+  smac_starcraft_micro:
+    image: coworld-smac-starcraft-micro:latest
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
+      network: host
