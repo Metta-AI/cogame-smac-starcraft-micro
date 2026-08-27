@@ -105,3 +105,27 @@ proc battleScorePermille*(
   result += config.dmgWeightPermille * dealt div enemyPool
   result += config.survWeightPermille * (ourPool - taken) div ourPool
   result = clamp(result, 0, 1000)
+
+proc bradsOfVectorInt*(dx, dy: int): int =
+  ## The heading of a map-space vector, in brads, computed with INTEGERS.
+  ##
+  ## `bradsOfVector` (sim_types) is `arctan2` plus `round`, and libm is not
+  ## bit-identical between glibc and wasm: one ULP either side of a rounding
+  ## boundary picks a different heading, which on the HASHED path (the enemy
+  ## army's aim) is a native <-> wasm replay divergence. This picks the entry of
+  ## the engine's own 1024-scaled unit-vector table whose dot product with the
+  ## vector is largest, breaking ties to the lower index, so it is a total
+  ## order over 256 headings and identical on every target.
+  ##
+  ## The table is `AimUnitX[b] = round(1024*cos(b))` and
+  ## `AimUnitY[b] = round(-1024*sin(b))`, i.e. exactly `aimVector`'s screen-space
+  ## convention, so this agrees with `bradsOfVector` everywhere but the
+  ## boundaries it exists to make deterministic.
+  if dx == 0 and dy == 0:
+    return 0
+  var best = low(int)
+  for b in 0 ..< AimBradsTurn:
+    let dot = dx * AimUnitX[b] + dy * AimUnitY[b]
+    if dot > best:
+      best = dot
+      result = b

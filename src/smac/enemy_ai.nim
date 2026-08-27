@@ -138,7 +138,7 @@ proc microEnemyInput*(sim: var SimServer, cogIndex: int): InputState =
   let
     tx = sim.players[target].x + CollisionW div 2
     ty = sim.players[target].y + CollisionH div 2
-    desired = bradsOfVector(tx - px, ty - py)
+    desired = bradsOfVectorInt(tx - px, ty - py)
   var err = (desired - sim.players[cogIndex].aimBrads) mod AimBradsTurn
   if err < -(AimBradsTurn div 2): err += AimBradsTurn
   if err > AimBradsTurn div 2: err -= AimBradsTurn

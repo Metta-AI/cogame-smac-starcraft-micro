@@ -76,7 +76,7 @@ proc microAttackTarget*(sim: SimServer, cogIndex: int): int =
       d = distSq(px, py, tx, ty)
     if d > reach * reach:
       continue
-    let err = bradsOfVector(tx - px, ty - py) - unit.aimBrads
+    let err = bradsOfVectorInt(tx - px, ty - py) - unit.aimBrads
     var wrapped = ((err mod AimBradsTurn) + AimBradsTurn) mod AimBradsTurn
     if wrapped > AimBradsTurn div 2:
       wrapped -= AimBradsTurn
