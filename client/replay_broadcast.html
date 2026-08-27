@@ -1291,9 +1291,9 @@ body[data-embed] #board { top: 0; height: 100%; }
       <div class="lk-sprites" id="lk-sprites"></div>
     </div>
     <div class="lk-glow" aria-hidden="true"></div>
-    <div class="lk-cap" id="lk-cap" aria-hidden="true">Filling hoppers with fresh paint&hellip;</div>
+    <div class="lk-cap" id="lk-cap" aria-hidden="true">Charging plasma cells&hellip;</div>
     <div class="lk-bar" aria-hidden="true"><i></i></div>
-    <div class="lk-sub">Bot locker room &middot; Loading replay</div>
+    <div class="lk-sub">Squad ready room &middot; Loading replay</div>
   </div>
 
   <div id="chrome">
@@ -1627,14 +1627,14 @@ body[data-embed] #board { top: 0; height: 100%; }
 
     // rotating prep-talk line under the scene
     var lines = [
-      'Filling hoppers with fresh paint…',
-      'Pump check: one, two. One, two…',
+      'Charging plasma cells…',
+      'Rifle diagnostics: one, two. One, two…',
       'Polishing visors to a mirror shine…',
-      'Shaking the paint pods awake…',
-      'Squats. Even robots warm up…',
-      'Topping off the CO₂…',
-      'Chalking up the wheels…',
-      'Reviewing the game plan…'
+      'Calibrating targeting arrays…',
+      'Squats. Even mechs warm up…',
+      'Venting reactor heat…',
+      'Torquing the drive wheels…',
+      'Reviewing the battle plan…'
     ];
     var capEl = $('lk-cap'), capIx = 0;
     lockerCapTimer = setInterval(function () {
@@ -3417,7 +3417,7 @@ body[data-embed] #board { top: 0; height: 100%; }
         case 'wall_clock': return 'WALL-CLOCK STOP';
         case 'sim_fault':
         case 'host_error': return 'FAULT — NO RESULT';
-        default: return o.draw ? 'FULL TIME — DEAD EVEN' : 'FULL TIME ON THE HILL';
+        default: return o.draw ? 'FULL TIME — DEAD EVEN' : 'FULL TIME — BOTH SIDES STANDING';
       }
     }
     if (o.draw) return o.timeLimit ? 'TIME LIMIT — DRAW' : 'DRAW';
@@ -4422,7 +4422,11 @@ body[data-embed] #board { top: 0; height: 100%; }
           CTX.esc(String(e.target)) + ' IS DOWN</span>');
         return true;
       case 'kill':
-        feedRow(CTX.esc(String(e.alias)) + ' destroyed');
+        // Two shapes reach here: the micro event (has `alias` — the fallen
+        // enemy) and the inherited killer/victim event the sim still emits
+        // for every death. Only the micro one is a feed row; the inherited
+        // shape is swallowed so it can never print "undefined destroyed".
+        if (e.alias) feedRow(CTX.esc(String(e.alias)) + ' destroyed');
         return true;
       case 'loss':
         smacBeat(s, e.t, 'loss', '',
@@ -4512,11 +4516,9 @@ body[data-embed] #board { top: 0; height: 100%; }
     }
   }
 
+  document.title = 'SMAC StarCraft Micro — Broadcast Replay';
   window.SmacChrome = {
-    install: function (ctx) {
-      CTX = ctx;
-      document.title = 'SMAC StarCraft Micro — Broadcast Replay';
-    },
+    install: function (ctx) { CTX = ctx; },
     frame: smacFrame,
     event: smacEvent
   };

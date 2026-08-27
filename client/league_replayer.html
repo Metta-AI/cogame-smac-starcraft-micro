@@ -168,6 +168,11 @@
   .khead{font-family:var(--finefont); font-size:calc(8*var(--u)); letter-spacing:.08em; text-transform:uppercase;
     color:var(--paper-dim); padding:0 calc(3*var(--u)) calc(4*var(--u)); border-bottom:1px solid rgba(242,232,216,.18)}
   .khead span:not(:first-child){text-align:center}
+  /* smac-starcraft-micro theater: no flags to fly, one life per unit — the
+     last column reads UP (still standing), not Lives. */
+  body.micro .flagicon{display:none}
+  body.micro .khead span:last-child{font-size:0}
+  body.micro .khead span:last-child::after{content:'Up'; font-size:calc(8*var(--u))}
   .krow{font-family:var(--pixfont); font-size:calc(12*var(--u)); padding:calc(3.5*var(--u)) calc(3*var(--u));
     border-radius:calc(2*var(--u)); cursor:pointer}
   .krow:nth-child(odd){background:rgba(242,232,216,.035)}
@@ -675,14 +680,32 @@
     });
   }
 
+  var microTheater=false;
+  function applyMicroTheater(s){
+    // smac-starcraft-micro: the theater speaks the board's color language
+    // (ours azure, enemy crimson — sim_types teamDisplayColor), drops the
+    // CTF flags, and names the sides for what they are. Latched once off the
+    // relayed state, exactly like the broadcast page's SMAC_MODE.
+    if (microTheater || !s || s.micro===undefined) return;
+    microTheater=true;
+    var root=document.documentElement.style;
+    root.setProperty('--red', '#57c7ff');
+    root.setProperty('--blue', '#ff5252');
+    document.body.classList.add('micro');
+    var ml=document.querySelector('.momentum-label');
+    if (ml) ml.textContent='ARMY HP LEAD';
+  }
   function renderScorebug(s){
+    applyMicroTheater(s);
     var teams=activeTeams(s);
     ensureShellTeams(teams);
     var tr=s.teams||{};
     var lives={};
     teams.forEach(function(team){ lives[team]=(tr[team]&&tr[team].lives)||0; });
     teams.forEach(function(team){
-      setName('name-'+team, teamName(s, team, team.toUpperCase()));
+      setName('name-'+team, microTheater
+        ? (team==='red' ? 'OUR SQUAD' : 'ENEMY ARMY')
+        : teamName(s, team, team.toUpperCase()));
       setHandicap('hcap-'+team, s, team);
       // Life meter(s) + perk badges — shared chrome (chrome_common.js
       // renderTeamMeters): the classic single "Lives N", or per-policy split
