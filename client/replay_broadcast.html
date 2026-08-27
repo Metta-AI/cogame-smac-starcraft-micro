@@ -4234,6 +4234,11 @@ body[data-embed] #board { top: 0; height: 100%; }
    see src/smac/sim_types.nim teamDisplayColor. The HUD reuses exactly those
    two accents so a viewer learns the color language once. */
 :root { --ours: #57c7ff; --foe: #ff5252; }
+/* A failed load must own the curtain: stop the prep-talk + progress bar the
+   moment the shell reports data-replay-error, so an error and a loading
+   state can never show at once. */
+html[data-replay-error] #lockerroom .lk-cap,
+html[data-replay-error] #lockerroom .lk-bar { display: none; }
 .armyrow.ours .arow-fill { background: var(--ours); }
 .armyrow.theirs .arow-fill { background: var(--foe); }
 .plate .smac-hpfill { background: var(--ours); }

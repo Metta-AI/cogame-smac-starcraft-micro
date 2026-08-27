@@ -3947,7 +3947,9 @@ proc buildSmoothShoutBubble(
     edge = teamDisplayColor(team)
     edgeColor = color(
       float32(edge.r) / 255, float32(edge.g) / 255, float32(edge.b) / 255, 1)
-    paperColor = color(1, 241 / 255, 232 / 255, 240 / 255)
+    # Dark comms chip, not cream paper: the shout reads as unit radio
+    # traffic over the dark deck, with the team edge carrying identity.
+    paperColor = color(23 / 255, 28 / 255, 37 / 255, 242 / 255)
     stroke = float32(k)
     radius = float32(2 * k)
     tailCx = float32(pillW div 2)
@@ -3973,7 +3975,7 @@ proc buildSmoothShoutBubble(
   image.fillPath(pillPath, paperColor)
   image.strokePath(pillPath, edgeColor, strokeWidth = stroke)
   font.paint = newPaint(SolidPaint)
-  font.paint.color = color(30 / 255, 24 / 255, 20 / 255, 1)
+  font.paint.color = color(242 / 255, 232 / 255, 216 / 255, 1)
   image.fillText(font, text,
     translate(vec2(float32(ShoutPadX * k), float32(ShoutPadY * k))))
   result.width = logicalW
@@ -4025,8 +4027,8 @@ proc buildShoutBubble*(
   text: string,
   zoom = 1
 ): tuple[width, height: int, pixels: seq[uint8]] {.measure.} =
-  ## A kid-friendly comic speech bubble for one shout: dark ink on a cream
-  ## "paper" pill with rounded corners, a chunky team-colored outline, and a
+  ## The shout pill: light text on a dark comms chip with rounded corners,
+  ## a chunky team-colored outline, and a
   ## little tail pointing down at the shouter. Drawn with the chunky 9px shout
   ## font (not the 6px tiny5 HUD font) so it reads at full desktop size, and
   ## in-world with the rest of the pixel art — never as an HD overlay. On the
@@ -4074,7 +4076,7 @@ proc buildShoutBubble*(
       if onEdge:
         result.pixels.putRawRgbaPixel(i, edge.r, edge.g, edge.b, 255)
       else:
-        result.pixels.putRawRgbaPixel(i, 255, 241, 232, 240)  # palette paper
+        result.pixels.putRawRgbaPixel(i, 23, 28, 37, 242)  # dark comms chip
 
   # Tail: a shrinking triangle of paper with a team-colored left/right lip,
   # so the bubble points at the shouter's head.
@@ -4090,12 +4092,12 @@ proc buildShoutBubble*(
       if dx == -half or dx == half or row == ShoutTailH - 1:
         result.pixels.putRawRgbaPixel(i, edge.r, edge.g, edge.b, 255)
       else:
-        result.pixels.putRawRgbaPixel(i, 255, 241, 232, 240)
+        result.pixels.putRawRgbaPixel(i, 23, 28, 37, 242)
 
   # Bold dark ink text in the chunky shout font, centered on the paper.
   result.pixels.blitFontText(
     width, height, font, text,
-    ShoutPadX, ShoutPadY, 0'u8,  # palette 0 = near-black ink
+    ShoutPadX, ShoutPadY, 2'u8,  # palette 2 = near-white, light-on-chip
     bold = true
   )
 
