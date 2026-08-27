@@ -13,7 +13,7 @@
 ## here means "a partner whose published rules you know".
 
 import
-  std/strutils,
+  std/[algorithm, strutils],
   sim, control, directives
 
 type
@@ -96,6 +96,26 @@ proc nearestMeleeEnemy(sim: SimServer, cogIndex: int): int =
       best = d
       result = j
 
+proc nthNearestEnemy(sim: SimServer, x, y, rank: int): int =
+  ## The `rank`-th nearest living enemy to a map point (0 = nearest), ranked by
+  ## integer squared distance with the enemy id as the tie-break so the order is
+  ## total and machine-independent. The rank wraps when fewer enemies are
+  ## standing than the rank asks for, so a five-unit squad always has a target.
+  ## -1 when the enemy army is gone.
+  var ranked: seq[(int, int, int)] = @[]   # (distSq, enemy id, cog index)
+  for j in sim.config.friendlyCount() ..< sim.players.len:
+    if not sim.players[j].alive:
+      continue
+    ranked.add((
+      distSq(x, y, sim.players[j].x + CollisionW div 2,
+             sim.players[j].y + CollisionH div 2),
+      sim.config.enemyIdOf(j),
+      j))
+  if ranked.len == 0:
+    return -1
+  ranked.sort()
+  ranked[rank mod ranked.len][2]
+
 proc scriptedDirective*(
   ctl: ControlState,
   sim: SimServer,
@@ -110,11 +130,17 @@ proc scriptedDirective*(
   ## dead at 50. A blade `screen`s while a friendly ranger is alive and a melee
   ## enemy is closing on it, otherwise `focus`es the kill order.
   ##
-  ## `charge` — deliberately weaker and different in SHAPE, so the ladder gets
-  ## a spread rather than two versions of one bot: every unit `attack_move`s at
-  ## the living enemy nearest ITSELF, every turn. Nobody kites, nobody screens,
-  ## nobody shares a target, so the squad splits its damage across the whole
-  ## enemy army and loses the trade.
+  ## `charge` — weaker BY CONSTRUCTION and different in SHAPE, so the ladder
+  ## gets a spread rather than two versions of one bot: unit k `attack_move`s at
+  ## the k-th nearest living enemy to ITSELF, every turn. Nobody kites, nobody
+  ## screens, and the seat-indexed rank means the five units pick five
+  ## DIFFERENT enemies whenever the army is that big — so the squad splits its
+  ## damage, every enemy lives longer, and every extra tick an enemy lives is
+  ## another swing at us. That is the arithmetic (focused damage kills faster
+  ## than spread damage, so it takes less in return) which makes `focusfire`
+  ## beat `charge` on every shipped composition rather than only on the ones
+  ## where "nearest me" happens to differ from the squad's kill order.
+  ## tests/test_control.nim pins the inequality on all four.
   result.source = dsScripted
   result.note = (if kind == blCharge: "charge" else: "focus fire")
   if governed.len == 0:
@@ -147,7 +173,10 @@ proc scriptedDirective*(
       result.orders.add(order)
       continue
     if kind == blCharge:
-      let near = sim.livingEnemyNearest(px, py)
+      ## Seat-indexed spreading: seat 0 takes the enemy nearest it, seat 1 the
+      ## second nearest to IT, and so on. Pure function of the state, so it is
+      ## as re-derivable as the rest of the baseline.
+      let near = sim.nthNearestEnemy(px, py, cogIndex)
       let pick = (if near >= 0: near else: order0)
       order.intent = intAttackMove
       order.targetId = sim.config.enemyIdOf(pick)

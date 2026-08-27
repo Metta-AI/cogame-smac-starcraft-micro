@@ -214,10 +214,14 @@ target without communicating:
    the kill order.
 4. With no living enemy: everyone `regroup`.
 
-**`charge`** — the second filler, deliberately weaker and different in SHAPE:
-every unit issues `attack_move` at the living enemy nearest **itself**, every
-turn. Nobody kites, nobody screens, nobody shares a target, so the squad splits
-its damage across the whole army and loses the trade.
+**`charge`** — the second filler, weaker BY CONSTRUCTION and different in
+SHAPE: unit *k* issues `attack_move` at the ***k*-th nearest** living enemy to
+itself, every turn — seat 0 at the enemy nearest it, seat 1 at the second
+nearest to it, and so on, ranked by squared distance with the enemy id as the
+tie-break and wrapped when fewer enemies are standing. Nobody kites, nobody
+screens, and the five units deliberately pick five different enemies, so the
+squad splits its damage across the army, every enemy lives longer, and every
+extra tick an enemy lives is another swing at us.
 
 ## What is NOT modelled
 

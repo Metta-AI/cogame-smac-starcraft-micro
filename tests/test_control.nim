@@ -189,7 +189,7 @@ suite "control":
     # A pinned regression against a baseline that does nothing.
     check sim.config.enemyCount() - sim.theirAlive >= 3
 
-  test "focusfire x 5 scores at least as high as charge x 5 at seed 679961":
+  test "focusfire x 5 scores strictly higher than charge x 5 at seed 679961":
     proc play(kind: Baseline, configJson: string): int =
       var
         sim = newMicroSim(configJson)
@@ -228,24 +228,15 @@ suite "control":
       let
         focus = play(blFocusFire, config)
         charge = play(blCharge, config)
-      # `default` is the variant the league RANKS, and it is the composition
-      # the two baselines are meant to separate on: two rangers that have to be
-      # screened and three blades that can do the screening. The pinned
-      # regression is STRICT there.
-      #
-      # MEASURED, and left as a fact rather than an assertion: on the other
-      # three compositions the two baselines CONVERGE (0.946 vs 0.953 on
-      # `outnumbered`, 0.912 vs 0.953 on `corridor`). That is not a bug in
-      # either bot — with five rangers there is nothing to screen and with
-      # twenty swarm units every enemy arrives at once, so "the enemy nearest
-      # ME" and "the squad's kill order" are the same enemy for most of the
-      # battle and `charge`'s extra aggression pays for the target spread. The
-      # inequality is a property of the 2s3z shape, not of the rules, so it is
-      # asserted where it is real and only bounded elsewhere: both baselines
-      # must finish an episode and score inside [0, 1].
-      if scenario[0] == @["ranger", "ranger", "blade", "blade", "blade"] and
-          scenario[1] == @["ranger", "ranger", "blade", "blade", "blade"]:
-        check focus > charge
+      # The ladder spread the design note argues for is a property of the
+      # RULES, not of one composition: `charge`'s seat-indexed target rank
+      # makes the five units attack five different enemies, so its damage is
+      # split by construction on every roster — 2s3z, five rangers, blades
+      # against twenty swarm, or the seven-unit corridor. Focused damage kills
+      # faster and therefore takes less in return, so the inequality is STRICT
+      # on all four shipped compositions, not asserted where it happens to hold
+      # and waived elsewhere.
+      check focus > charge
       check focus >= 0
       check focus <= 1000
       check charge >= 0
