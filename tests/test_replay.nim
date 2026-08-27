@@ -21,8 +21,17 @@ proc recordEpisode(path: string): SimServer =
   ## Plays a full scripted 5-seat, 3-battle episode and writes a COWLDSMC
   ## replay, exactly as the server does: one mask per FRIENDLY unit per tick,
   ## one gameHash per tick, and the whole enemy army re-derived.
+  ##
+  ## The squad is seated but the game is NOT started here: the sim's own
+  ## `stepLobby` starts each battle on the step after the roster is complete,
+  ## which is exactly what happens on playback from the recorded joins. A
+  ## recorder that calls `startGame` itself runs one tick ahead of every replay
+  ## of its own file, and then nothing matches from tick 1 on.
   var
-    sim = newMicroSim(microConfigJson(maxTicks = 240, maxGames = 3))
+    sim = initForTest(microConfig(microConfigJson(maxTicks = 240, maxGames = 3)))
+  sim.gameEventLoggingEnabled = false
+  sim.seatMicroSquad()
+  var
     ctl = initControlState(sim)
     writer = openReplayWriter(path, sim.config.configJson())
     prev = sim.idle()
