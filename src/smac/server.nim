@@ -2102,10 +2102,8 @@ proc runServerLoop*(
               ## next spawn: `resetToLobby` empties the roster, and every
               ## per-seat counter the results document reports lives on it.
               sim.archiveBattle()
-              ## `advanceBattle` moves the HASHED battleIndex (and gameIndex
-              ## with it) to `gamesPlayed`, and playback calls the identical
-              ## proc after the same tick's hash check — see scenario.nim.
-              sim.advanceBattle()
+              sim.gameIndex = gamesPlayed
+              sim.battleIndex = gamesPlayed
               echo "battle ", gamesPlayed, " done: ",
                 sim.battleLog[^1].endRule, " in ", sim.battleLog[^1].ticks,
                 " ticks, damage ", sim.battleLog[^1].dmgDealt, "/",

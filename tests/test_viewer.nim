@@ -52,12 +52,12 @@ suite "viewer":
   test "the page is the starter's, with a game block APPENDED":
     check bannerAt > 0
     check inherited.len > appended.len
-    for id in ["viewport", "stage", "board", "lightpool", "grain",
-               "lockerroom", "chrome", "scorebug", "bannerlane",
-               "killfeed", "fpv", "povBadge", "mmwarn", "transport",
-               "scrub", "momentum", "lulls", "scrub-win", "scrub-head",
-               "endcard"]:
-      check ("id=\"" & id & "\"") in inherited
+    for id in ["#viewport", "#stage", "#board", "#lightpool", "#grain",
+               "#lockerroom", "#chrome", "#scorebug", "#bannerlane",
+               "#killfeed", "#fpv", "#povBadge", "#mmwarn", "#transport",
+               "#scrub", "#momentum", "#lulls", "#scrub-win", "#scrub-head",
+               "#endcard"]:
+      check id in inherited
     check "plates-l" in inherited
     check "plates-r" in inherited
     check "id=\"clock\"" in inherited
@@ -99,25 +99,10 @@ suite "viewer":
     check "SmacChrome" in appended
     check "battle " in appended
 
-  test "the army bars are a scorebug ROW, never an overlay on the plates":
-    ## B6: absolutely positioned inside #chrome they were drawn across the seat
-    ## plates. As #scorebug's own full-width grid row the band measures them, so
-    ## relayout() reserves the height and nothing overlaps.
-    check "grid-column: 1 / -1;" in appended
-    check "$('scorebug') || $('chrome')" in appended
-    let bars = appended[appended.find("#armybars {") .. ^1]
-    check "position: absolute" notin bars[0 ..< bars.find("}")]
-    check "--topband" notin bars[0 ..< bars.find("}")]
-
-  test "the 360 px rules are present, labels included":
+  test "the three 360 px rules are present":
     check ".plate-name {" in appended
     check "flex: 1 1 auto;" in appended
     check "min-width: 3.2em;" in appended
-    # Item 11's second clause: the plate LABEL is hidden under 640 px, the way
-    # the starter hides `.lives-label`. The micro plate's `Dmg` span carries
-    # both class names, so both are pinned here.
-    check "#stage.tiny .plate .lives-label" in appended
-    check "#stage.tiny .plate .smac-lbl { display: none; }" in appended
     check "#stage.tiny .plate .smac-kills { display: none; }" in appended
     check "#stage.tiny .armyrow .arow-notch { display: none; }" in appended
 

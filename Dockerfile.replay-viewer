@@ -28,7 +28,6 @@ RUN nim c -d:emscripten replay-viewer/smac_replay.nim && \
   cp data/font.ttf replay-viewer/dist/font.ttf && \
   cp replay-viewer/static_replay.js replay-viewer/dist/static_replay.js && \
   cp replay-viewer/static_replay_worker.js replay-viewer/dist/static_replay_worker.js && \
-  cp replay-viewer/text_fixture.html replay-viewer/dist/text_fixture.html && \
   sed -e 's|<!-- WIRE_CONSTANTS -->|<script src="./wire_constants.js"></script>|' \
       -e 's|<!-- CHROME_COMMON -->|<script src="./chrome_common.js"></script>|' \
       -e 's|<!-- BROADCAST_CORE -->|<script src="./static_replay.js"></script>|' \
@@ -50,7 +49,6 @@ RUN nim c -d:emscripten replay-viewer/smac_replay.nim && \
   test -f replay-viewer/dist/smac_replay.wasm && \
   test -f replay-viewer/dist/smac_replay.data && \
   test -f replay-viewer/dist/static_replay_worker.js && \
-  test -s replay-viewer/dist/text_fixture.html && \
   test -f replay-viewer/dist/index.html && \
   test -f replay-viewer/dist/league.html && \
   test -s replay-viewer/dist/wire_constants.js && \

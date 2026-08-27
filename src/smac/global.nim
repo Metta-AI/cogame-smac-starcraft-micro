@@ -1,5 +1,5 @@
 import
-  std/[algorithm, json, math, os, strutils, tables],
+  std/[algorithm, math, os, strutils, tables],
   supersnappy,
   bitworld/pixelfonts, bitworld/profile, bitworld/spriteprotocol, bitworld/server,
   pixie,
@@ -3973,7 +3973,7 @@ proc buildSmoothShoutBubble(
   smoothShoutBubbleCache[cacheKey] = result
 
 proc shoutBubblePlacement*(
-  game: SimServer, anchorX, tailTipY, bubbleW, bubbleH: int, bandH = 0
+  game: SimServer, anchorX, tailTipY, bubbleW, bubbleH: int
 ): tuple[x, y: int] =
   ## Where one speech bubble is PLACED, in logical map pixels, so that it is
   ## always wholly inside the board — the frame every spectator client fits
@@ -3987,24 +3987,12 @@ proc shoutBubblePlacement*(
   ## can see it. So: if the bubble does not fit above the tail tip it FLIPS
   ## below it (the tail is cosmetic; being read is not), and either way both
   ## axes are clamped into the board rect.
-  ##
-  ## `bandH` is the RESERVED BAND — `shoutBubbleMaxHeight`, the tallest bubble
-  ## the server's own `ShoutMaxChars` cap can produce, measured in the font it
-  ## is drawn in. The above/below decision is made against the BAND, never
-  ## against the height of the remark that happens to have landed, so which
-  ## side a cog's bubble sits on cannot change with what it says. Today the two
-  ## are equal (a bubble's height is `shoutFont.height + 2 * ShoutPadY +
-  ## ShoutTailH`, independent of the text — only its WIDTH grows), and
-  ## tests/test_shouts.nim asserts that equality: the day a bubble wraps to a
-  ## second line, the band keeps the scene from jumping instead of the fix
-  ## having to be reinvented.
   let
-    band = max(bandH, bubbleH)
     maxX = max(0, game.gameMap.width - bubbleW)
     maxY = max(0, game.gameMap.height - bubbleH)
   result.x = clamp(anchorX - bubbleW div 2, 0, maxX)
   result.y =
-    if tailTipY - band >= 0: tailTipY - bubbleH
+    if tailTipY - bubbleH >= 0: tailTipY - bubbleH
     else: tailTipY + ShoutFloat
   result.y = clamp(result.y, 0, maxY)
 
@@ -4088,19 +4076,15 @@ proc buildShoutBubble*(
     bold = true
   )
 
-proc shoutBubbleMaxHeight*(game: SimServer, zoom = 0): int =
+proc shoutBubbleMaxHeight*(game: SimServer): int =
   ## The height of the tallest bubble the SERVER can ever produce: the shout
   ## cap (ShoutMaxChars runes) in the font it will be drawn in, at this
-  ## board's bubble zoom (pass `zoom` for a stream that draws at another one —
-  ## the player views are always 1x). This is the reserved band — sized from
-  ## the cap the server enforces and measured in the real font, never by eye —
-  ## and it is reserved whether or not anyone is speaking, so nothing about the
-  ## scene depends on a remark landing. Every draw path passes it to
-  ## `shoutBubblePlacement`.
-  let z =
-    if zoom > 0: zoom
-    else: shoutBubbleZoomFor(game.gameMap.width, game.gameMap.height)
-  game.buildShoutBubble(Red, repeat("W", ShoutMaxChars), z).height
+  ## board's bubble zoom. This is the reserved band — sized from the cap the
+  ## server enforces and measured in the real font, never by eye — and it is
+  ## reserved whether or not anyone is speaking, so nothing about the scene
+  ## depends on a remark landing.
+  let zoom = shoutBubbleZoomFor(game.gameMap.width, game.gameMap.height)
+  game.buildShoutBubble(Red, repeat("W", ShoutMaxChars), zoom).height
 
 proc centeredTextX(sim: SimServer, text: string): int =
   ## Returns the centered x position for interstitial text.
@@ -4988,50 +4972,8 @@ proc shoutBubbleRectFor*(
     bubble = game.buildShoutBubble(player.team, text, zoom)
     anchor = player.shoutAnchor()
     place = shoutBubblePlacement(
-      game, anchor.x, anchor.tailTipY, bubble.width, bubble.height,
-      game.shoutBubbleMaxHeight(zoom))
+      game, anchor.x, anchor.tailTipY, bubble.width, bubble.height)
   (place.x, place.y, bubble.width, bubble.height)
-
-proc shoutTextReportJson*(game: SimServer): string =
-  ## THE TEXT-BOUNDS REPORT: the reserved band, the board rect, and for every
-  ## live shout the text it carries and the map-space rect its bubble lands in,
-  ## through `shoutBubbleRectFor` — the same geometry the draw pass uses.
-  ##
-  ## Why it exists rather than a browser-side measurement: this board's text is
-  ## RASTERIZED IN NIM and shipped as sprite pixels, so the shipped viewer never
-  ## calls `fillText` at all and a harness that hooks
-  ## `CanvasRenderingContext2D` legitimately reports `canvas_text.total: 0` — a
-  ## number that is evidence of nothing. This is the same question asked where
-  ## the renderer can actually answer it, and it is asserted on BOTH sides of
-  ## the wall: natively in tests/test_shouts.nim, and in a real browser by
-  ## replay-viewer/text_fixture.html through `smac_text_report()`.
-  var bubbles = newJArray()
-  for i in 0 ..< game.players.len:
-    for shout in game.recentShouts:
-      if shout.address != game.players[i].address:
-        continue
-      let rect = game.shoutBubbleRectFor(i, shout.text)
-      bubbles.add %*{
-        "text": shout.text,
-        # The say path is printable ASCII by construction (sanitizeSay, then
-        # sanitizeShout), so bytes ARE runes here — no std/unicode in the
-        # renderer's import cone for one length.
-        "runes": shout.text.len,
-        "x": rect.x, "y": rect.y, "w": rect.w, "h": rect.h,
-        "inside":
-          rect.x >= 0 and rect.y >= 0 and
-          rect.x + rect.w <= game.gameMap.width and
-          rect.y + rect.h <= game.gameMap.height
-      }
-  $(%*{
-    "tick": game.tickCount,
-    "board": {"w": game.gameMap.width, "h": game.gameMap.height},
-    "band": game.shoutBubbleMaxHeight(),
-    "sayCap": MaxSayRunes,
-    "noteCap": MaxNoteRunes,
-    "feed": game.feedDirectives,
-    "bubbles": bubbles
-  })
 
 proc selectSpritePlayer(
   sim: SimServer,
@@ -6107,13 +6049,11 @@ proc addShouts(
       bubble = sim.buildShoutBubble(shout.team, shout.text)
       spriteId = ShoutSpriteBase + slot
       objectId = ShoutObjectBase + slot
-      ## Same clamp as the board pass, against the same reserved band: a
-      ## shouter standing on the top row of the map would otherwise place its
-      ## bubble at a negative y, where the layer canvas clips it to a sliver.
-      ## Player streams draw 1x bubbles, so the band is measured at 1x.
+      ## Same clamp as the board pass: a shouter standing on the top row of
+      ## the map would otherwise place its bubble at a negative y, where the
+      ## layer canvas clips it to a sliver.
       place = shoutBubblePlacement(
-        sim, anchorX, tailTipY, bubble.width, bubble.height,
-        sim.shoutBubbleMaxHeight(zoom = 1))
+        sim, anchorX, tailTipY, bubble.width, bubble.height)
     packet.addBoardSpriteChanged(
       spriteDefs,
       spriteId,
@@ -6228,9 +6168,7 @@ proc addBoardShouts(
   # Oversize boards draw bubbles zoomed so they hold their on-screen size
   # when the client fits the whole board to the viewport. Board-only: the
   # player streams (bot observations) keep 1× bubbles.
-  let
-    zoom = shoutBubbleZoomFor(sim.gameMap.width, sim.gameMap.height)
-    band = sim.shoutBubbleMaxHeight(zoom)
+  let zoom = shoutBubbleZoomFor(sim.gameMap.width, sim.gameMap.height)
   for slot in 0 ..< ShoutMaxCount:
     if not state.shoutLinger[slot].active:
       continue
@@ -6249,8 +6187,7 @@ proc addBoardShouts(
       spriteId = ShoutSpriteBase + slot
       objectId = ShoutObjectBase + slot
       place = shoutBubblePlacement(
-        sim, linger.anchorX, linger.tailTipY, bubble.width, bubble.height,
-        band)
+        sim, linger.anchorX, linger.tailTipY, bubble.width, bubble.height)
     packet.addBoardSpriteChanged(
       state.spriteDefs,
       spriteId,

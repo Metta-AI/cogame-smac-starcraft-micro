@@ -786,14 +786,8 @@ const
   DefaultTurnBudgetMs* = 10_000 ## hard monotonic cap around one whole turn.
   DefaultAttempt1Ms* = 6000     ## first parallel batch deadline (6 s exactly).
   DefaultRetryMs* = 3000        ## single retry batch deadline (6 + 3 <= 10).
-  DefaultTurnSpacingMs* = 12_000
-                                ## wall-clock floor between batch STARTS. The
-                                ## Bedrock sidecar caps 30 requests/minute PER
-                                ## EPISODE and this game issues FIVE per turn,
-                                ## so 12.0 s pins the episode at 5 x 60 / 12 =
-                                ## 25 req/min. It is a floor, not a sleep on
-                                ## the critical path: the loop keeps stepping
-                                ## sim ticks while it waits.
+  DefaultTurnSpacingMs* = 5000  ## wall-clock floor between batch STARTS; holds
+                                ## 2 seats under the sidecar's 30 req/min cap.
   DefaultWallClockBudgetSeconds* = 690
                                 ## engine hard stop, 57.5% of the assumed 1200 s
                                 ## episodeTimeoutSeconds (the 60% pin).
@@ -811,14 +805,7 @@ const
   MaxDirectiveRunes* = 900      ## whole serialized `directive` record cap.
   MaxPromptRunes* = 4000        ## PLAYER_PROMPT transport cap (truncate, never
                                 ## reject); never written to the replay.
-  MaxCogIdRunes* = 16           ## `cogs[].id` cap, in RUNES. Applied to the
-                                ## MODEL-authored id in `directives.cogEntries`
-                                ## before it is matched against the commanded
-                                ## aliases: it is the one unbounded string in a
-                                ## reply the matcher reads. 16 clears the
-                                ## longest alias this game issues
-                                ## (`RANGER-epsilon`, 14 runes), so no
-                                ## legitimate id is cut into a mismatch.
+  MaxCogIdRunes* = 12           ## `cogs[].id` cap, in RUNES.
   AimUnitScale* = 1024
     ## Fixed-point scale of the integer aim table below. The paint grid's cone
     ## test is the one piece of NEW hashed arithmetic in this fork, and Nim's

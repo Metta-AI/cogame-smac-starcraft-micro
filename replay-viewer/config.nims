@@ -50,6 +50,6 @@ switch(
   -s FILESYSTEM=1
   -s ENVIRONMENT=web,worker,node
   -s EXPORTED_RUNTIME_METHODS=HEAPU8
-  -s EXPORTED_FUNCTIONS=_main,_malloc,_free,_smac_load_replay,_smac_frame,_smac_input,_smac_packet_ptr,_smac_packet_len,_smac_mismatch_tick,_smac_replay_tick,_smac_replay_max_tick,_smac_text_report,_smac_text_report_ptr,_smac_error_ptr,_smac_error_len,_smac_stage_ptr,_smac_stage_len
+  -s EXPORTED_FUNCTIONS=_main,_malloc,_free,_smac_load_replay,_smac_frame,_smac_input,_smac_packet_ptr,_smac_packet_len,_smac_mismatch_tick,_smac_error_ptr,_smac_error_len,_smac_stage_ptr,_smac_stage_len
   """).replace("\n", " ")
 )

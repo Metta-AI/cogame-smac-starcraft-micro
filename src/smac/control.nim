@@ -331,8 +331,8 @@ proc microCentre*(sim: SimServer): tuple[x, y: int] =
     sy += sim.players[i].y + CollisionH div 2
     inc n
   if n == 0:
-    return (x: MapWidth div 2, y: MapHeight div 2)
-  (x: sx div n, y: sy div n)
+    return (MapWidth div 2, MapHeight div 2)
+  (sx div n, sy div n)
 
 proc livingEnemyNearest*(
   sim: SimServer, x, y: int
@@ -402,24 +402,12 @@ proc rangerPost*(
   ## it, starting from the direction "enemy -> our squad centre" and
   ## alternating outward. Nothing clear -> the enemy's own position, which is
   ## an advance rather than a stall.
-  ##
-  ## The start of the probe is rotated by SEAT (one probe step per seat), which
-  ## is what `cogIndex` is for. Without it every ranger focusing the same kill
-  ## order evaluates the identical 16 candidates in the identical order, takes
-  ## the identical first clear one, and all five walk into ONE point: they
-  ## collide, wedge, and take a whole enemy squad's fire in a pile. MEASURED at
-  ## the pinned seed (five rangers against six): 0.327 crowded against 0.908
-  ## for a baseline that never shares a target at all. Five seats now sit on
-  ## five posts spread across the 90 degrees of the standoff circle facing our
-  ## side, all shooting the same target — which is what focus fire is supposed
-  ## to look like.
   let
     ex = sim.players[enemyIndex].x + CollisionW div 2
     ey = sim.players[enemyIndex].y + CollisionH div 2
     centre = microCentre(sim)
     standoff = max(1, sim.config.rangerStandoff)
-    base = bradsOfVector(centre.x - ex, centre.y - ey) +
-      max(0, cogIndex) * 16
+    base = bradsOfVector(centre.x - ex, centre.y - ey)
   for step in 0 ..< 16:
     let
       offset = ((step + 1) div 2) * 16 * (if step mod 2 == 0: 1 else: -1)
@@ -428,16 +416,16 @@ proc rangerPost*(
       px = clamp(ex + int(ux * float(standoff)), 0, MapWidth - 1)
       py = clamp(ey + int(uy * float(standoff)), 0, MapHeight - 1)
     if sim.canOccupy(px, py) and sim.paintPathClear(px, py, ex, ey):
-      return (x: px, y: py)
-  (x: ex, y: ey)
+      return (px, py)
+  (ex, ey)
 
 proc predictedCentre*(sim: SimServer, index, ticks: int): tuple[x, y: int] =
   ## Where a unit's centre will be `ticks` from now at its current velocity —
   ## integer lead, so a ranger's 5-tick windup is aimed where the target is
   ## going rather than where it was.
   let p = sim.players[index]
-  (x: p.x + CollisionW div 2 + p.velX * ticks div MotionScale,
-   y: p.y + CollisionH div 2 + p.velY * ticks div MotionScale)
+  (p.x + CollisionW div 2 + p.velX * ticks div MotionScale,
+   p.y + CollisionH div 2 + p.velY * ticks div MotionScale)
 
 proc goalFor*(
   ctl: ControlState, sim: SimServer, order: CogOrder, cogIndex: int
@@ -450,11 +438,11 @@ proc goalFor*(
     unit = sim.players[cogIndex]
     px = unit.x + CollisionW div 2
     py = unit.y + CollisionH div 2
-    target: tuple[x, y: int] = (clamp(order.targetX, 0, MapWidth - 1),
-                                clamp(order.targetY, 0, MapHeight - 1))
+    target = (clamp(order.targetX, 0, MapWidth - 1),
+              clamp(order.targetY, 0, MapHeight - 1))
     enemy = sim.resolveOrderEnemy(order, cogIndex)
   var
-    goal: tuple[x, y: int] = target
+    goal = target
     capped = false
   case order.intent
   of intFocus:
@@ -464,8 +452,8 @@ proc goalFor*(
       goal = sim.rangerPost(enemy, cogIndex)
       capped = true
     else:
-      goal = (x: sim.players[enemy].x + CollisionW div 2,
-              y: sim.players[enemy].y + CollisionH div 2)
+      goal = (sim.players[enemy].x + CollisionW div 2,
+              sim.players[enemy].y + CollisionH div 2)
       capped = true
   of intAttackMove:
     goal = target
@@ -474,8 +462,8 @@ proc goalFor*(
     if unit.role != urRanger:
       ## A blade reads `kite` as `focus`: it has no range to trade with.
       if enemy >= 0:
-        goal = (x: sim.players[enemy].x + CollisionW div 2,
-                y: sim.players[enemy].y + CollisionH div 2)
+        goal = (sim.players[enemy].x + CollisionW div 2,
+                sim.players[enemy].y + CollisionH div 2)
         capped = true
       else:
         goal = target
@@ -494,7 +482,7 @@ proc goalFor*(
           ## SHOOT AND SCOOT: the weapon is ready and the shot will land, so
           ## the unit stands still and fires. This is the ONE place in the
           ## design where a goal depends on the weapon's cooldown.
-          goal = (x: px, y: py)
+          goal = (px, py)
         else:
           goal = sim.standoffPoint(
             nx, ny, px, py, max(1, sim.config.kiteStandoff))
@@ -504,8 +492,8 @@ proc goalFor*(
     let ranger = weakestRanger(sim)
     if ranger < 0:
       if enemy >= 0:
-        goal = (x: sim.players[enemy].x + CollisionW div 2,
-                y: sim.players[enemy].y + CollisionH div 2)
+        goal = (sim.players[enemy].x + CollisionW div 2,
+                sim.players[enemy].y + CollisionH div 2)
         capped = true
       else:
         goal = target
@@ -525,8 +513,8 @@ proc goalFor*(
         capped = true
   of intRetreat:
     let zone = sim.captureZone(sim.players[cogIndex].team)
-    goal = (x: clamp(target.x, zone.xLo, zone.xHi),
-            y: clamp(target.y, zone.yLo, zone.yHi))
+    goal = (clamp(target.x, zone.xLo, zone.xHi),
+            clamp(target.y, zone.yLo, zone.yHi))
   of intRegroup:
     var
       sx = 0
@@ -538,14 +526,14 @@ proc goalFor*(
       sx += sim.players[i].x + CollisionW div 2
       sy += sim.players[i].y + CollisionH div 2
       inc n
-    goal = (if n == 0: target else: (x: sx div n, y: sy div n))
+    goal = (if n == 0: target else: (sx div n, sy div n))
   if capped:
     let cap = max(1, sim.config.chaseCapPx)
     let d = distSq(px, py, goal.x, goal.y)
     if d > cap * cap:
       let span = max(1, abs(goal.x - px) + abs(goal.y - py))
-      goal = (x: clamp(px + (goal.x - px) * cap div span, 0, MapWidth - 1),
-              y: clamp(py + (goal.y - py) * cap div span, 0, MapHeight - 1))
+      goal = (clamp(px + (goal.x - px) * cap div span, 0, MapWidth - 1),
+              clamp(py + (goal.y - py) * cap div span, 0, MapHeight - 1))
   goal
 
 proc compileMask*(

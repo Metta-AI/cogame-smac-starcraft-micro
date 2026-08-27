@@ -200,38 +200,24 @@ baseline for the whole episode, and all three battles play out.
 **`focusfire`** — the certification player, the per-turn LLM fallback, the
 driver of a no-show seat, and the default for a seat that registers with
 neither `PLAYER_PROMPT` nor `PLAYER_SCRIPTED`. Every governed unit derives the
-**same** kill order from state alone, so the seats that can concentrate fire —
-the **rangers** — converge on one target without communicating, each from its
-own standoff post:
+**same** kill order from state alone, so five independent seats converge on one
+target without communicating:
 
 1. Rank the living enemies by, in order: (a) inside 420 px of any living
    friendly unit before everything else; (b) current hp ascending; (c) integer
    squared distance to our squad centroid ascending; (d) enemy id ascending.
 2. A living **ranger** issues `focus` on the kill order — unless a living melee
    enemy is within `panicPx` = **150 px** of it, in which case it issues `kite`
-   with that enemy as `target_id`. Its standoff post is one probe step per seat
-   around the target's standoff circle, so five rangers shooting one target
-   stand on five different posts instead of walking into the same point.
+   with that enemy as `target_id`.
 3. A living **blade** issues `screen` when at least one friendly ranger is alive
-   and some melee enemy is within 260 px of that ranger; otherwise `focus` — on
-   the **kill order** while our squad is not outnumbered (`enemyRoles` no longer
-   than `roles`), and on the living enemy nearest **itself** when it is. A melee
-   unit cannot concentrate damage from where it stands, only walk: against a few
-   tough enemies, arriving together and killing the focused one is worth it;
-   against a bigger, thinner army, three arcs into one dying body is wasted
-   damage while everything the pile is not facing keeps swinging.
+   and some melee enemy is within 260 px of that ranger; otherwise `focus` on
+   the kill order.
 4. With no living enemy: everyone `regroup`.
 
-**`charge`** — the second filler, weaker BY CONSTRUCTION and different in
-SHAPE: unit *k* issues `attack_move` at the **(*k* + turn)-th deepest** living
-enemy in the formation, measured from our squad centre — ranked by squared
-distance descending, with the enemy id as the tie-break, wrapped when fewer
-enemies are standing. Nobody kites, nobody screens. Three weaknesses in one
-rule: the squad pushes to the **far side** of the enemy army and fights it from
-the inside (our damage is capped by the weapon cooldown, the number of enemies
-in contact with us is not); the seat-indexed rank splits the damage five ways
-instead of killing anything; and the rotating rank abandons a half-killed enemy
-every turn.
+**`charge`** — the second filler, deliberately weaker and different in SHAPE:
+every unit issues `attack_move` at the living enemy nearest **itself**, every
+turn. Nobody kites, nobody screens, nobody shares a target, so the squad splits
+its damage across the whole army and loses the trade.
 
 ## What is NOT modelled
 

@@ -1099,12 +1099,6 @@ proc absorbDamage*(
   let fromShield = min(sim.players[targetIndex].shieldHp, amount)
   sim.players[targetIndex].shieldHp -= fromShield
   sim.players[targetIndex].hp -= amount - fromShield
-  # MICRO: HIT POINTS FLOOR AT 0 (docs/RULES.md). The inherited engine leaves
-  # hp negative and clamps at every read site; here the sim guard asserts
-  # `hp in [0, maxHp]` every tick, and a floored ledger is also what makes the
-  # overkill clip below exact.
-  if sim.config.microMode():
-    sim.players[targetIndex].hp = max(0, sim.players[targetIndex].hp)
   # MICRO ledger: the scoreboard banks only the share of the hit that the
   # victim actually had left. Clipping the overkill here — the ONE subtraction
   # point — is what makes `dmgFrac == 1` mean exactly "the enemy army is dead"
@@ -1172,26 +1166,22 @@ proc selectArcVictims(
     ax = attacker.x + CollisionW div 2
     ay = attacker.y + CollisionH div 2
     (ux, uy) = aimVector(attacker.arcAimBrads)
-    reach = float(SprayPaintReach)
+    ## MICRO: the wedge is the role's own reach at the configured half-angle
+    ## (bladeArcBrads = 32 brads = 45 degrees), so the same arc machinery
+    ## resolves a blade's swing and a swarm unit's.
+    reach =
+      if micro: float(sim.config.roleReach(attacker.role))
+      else: float(SprayPaintReach)
+    halfAngle = float(sim.config.bladeArcBrads) * PI /
+      float(AimBradsTurn div 2)
     # The cone's half-width grows linearly with forward distance, hitting
     # SprayPaintMaxWidth / 2 exactly at the reach cap.
-    halfWidthSlope = float(SprayPaintMaxWidth) / (2.0 * reach)
-    ## MICRO: the wedge is the role's own reach at the configured half-angle
-    ## (bladeArcBrads = 32 brads = 45 degrees), and it is tested with INTEGER
-    ## arithmetic against the engine's own 1024-scaled unit-vector table. A
-    ## float `tan()` here would be a NEW floating-point value on the hashed
-    ## path, and wasm's libm need not agree with glibc's in the last bit — the
-    ## design's determinism rule exists for exactly this.
-    microReach = sim.config.roleReach(attacker.role) + PlayerHalf
-    microHalf = clamp(sim.config.bladeArcBrads, 1, 63)
-    aimIndex = ((attacker.arcAimBrads mod AimBradsTurn) + AimBradsTurn) mod
-      AimBradsTurn
-    unitX = AimUnitX[aimIndex]
-    unitY = AimUnitY[aimIndex]
-    # cos and sin of the half-angle, from the same 1024-scaled table:
-    # AimUnitX is cos(brads) and AimUnitY is -sin(brads).
-    cosHalf = AimUnitX[microHalf]
-    sinHalf = -AimUnitY[microHalf]
+    halfWidthSlope =
+      if micro: tan(min(halfAngle, 1.5))
+      else: float(SprayPaintMaxWidth) / (2.0 * reach)
+    bodyRadius =
+      if micro: float(PlayerHalf)
+      else: float(SprayPaintBodyRadius)
   for i in 0 ..< sim.players.len:
     if i == attackerIndex or not sim.players[i].alive:
       continue
@@ -1199,34 +1189,14 @@ proc selectArcVictims(
     ## wedge and ignores friendly bodies entirely.
     if micro and not sim.config.microOpposed(attackerIndex, i):
       continue
-    if micro:
-      let
-        dx = sim.players[i].x + CollisionW div 2 - ax
-        dy = sim.players[i].y + CollisionH div 2 - ay
-        # 1024-scaled dot and cross products with the locked aim direction.
-        forwardI = (dx * unitX + dy * unitY) div 1024
-        perpI = abs(dx * unitY - dy * unitX) div 1024
-      if forwardI <= 0 or forwardI > microReach:
-        continue
-      # |perp| / forward <= tan(half)  <=>  |perp| * cos(half) <= forward * sin(half)
-      if perpI * cosHalf > forwardI * sinHalf:
-        continue
-      if not sim.paintPathClear(
-        ax, ay,
-        sim.players[i].x + CollisionW div 2,
-        sim.players[i].y + CollisionH div 2
-      ):
-        continue
-      result.add(i)
-      continue
     let
       vx = float(sim.players[i].x + CollisionW div 2 - ax)
       vy = float(sim.players[i].y + CollisionH div 2 - ay)
       forward = vx * ux + vy * uy
       perpendicular = abs(vx * uy - vy * ux)
-    if forward <= 0 or forward > reach + float(SprayPaintBodyRadius):
+    if forward <= 0 or forward > reach + bodyRadius:
       continue
-    if perpendicular > forward * halfWidthSlope + float(SprayPaintBodyRadius):
+    if perpendicular > forward * halfWidthSlope + bodyRadius:
       continue
     if not sim.paintPathClear(
       ax,
@@ -1451,49 +1421,6 @@ proc jitterDirection(
   ## it is part of the hashed game, so replays re-roll identically). The
   ## same fuzzed direction drives target selection AND the tracer/stain, so
   ## where the paint lands is where the viewer sees it fly.
-  if sim.config.microMode():
-    ## MICRO: the SAME calibration, computed with INTEGERS.
-    ##
-    ## The inherited path rotates the aim by `gauss(0, sigma)` and takes
-    ## `sin`/`cos` of the result. Every one of those is libm, and wasm's libm
-    ## need not agree with glibc's in the last bit — which is a native <-> wasm
-    ## hash divergence the moment a shot lands on a boundary. The paint loadout
-    ## never noticed because it has no gun; this game is a hitscan game, and
-    ## the design makes the per-tick hash chain load-bearing.
-    ##
-    ## So the jitter is drawn as an integer angle in MILLI-BRADS and the
-    ## direction is read from the engine's own 1024-scaled unit-vector table,
-    ## linearly interpolated for sub-brad resolution. The distribution is
-    ## triangular (the sum of two uniform draws) with the same standard
-    ## deviation the Gaussian had, so a fully visible body at maximum range is
-    ## still hit about 80% of the time:
-    ##
-    ##   half window (milli-brads) = 1000 * 256 * (PlayerHalf + 8)
-    ##                               / (2*pi * gunRange)
-    ##   sigma  = half window / 1.2816      (Phi^-1(0.90))
-    ##   spread = sigma / 0.408             (a triangular sd is a / sqrt(6))
-    ##
-    ## Every intermediate fits in 32 bits, which `int` is under --cpu:wasm32.
-    let
-      range = max(1, sim.config.gunRange)
-      denom = max(1, (6283 * range) div 1000)
-      halfWindowMilli = max(1, (AimBradsTurn * (PlayerHalf + 8) * 1000) div denom)
-      sigmaMilli = max(1, halfWindowMilli * 1000 div 1282)
-      spread = max(1, sigmaMilli * 245 div 100)
-      jitterMilli =
-        (sim.rng.rand(2 * spread) - spread) + (sim.rng.rand(2 * spread) - spread)
-      turnMilli = AimBradsTurn * 1000
-    var fine = headingBrads * 1000 + jitterMilli
-    fine = ((fine mod turnMilli) + turnMilli) mod turnMilli
-    let
-      step = fine div 1000
-      frac = fine mod 1000
-      nextStep = (step + 1) mod AimBradsTurn
-      unitX = (AimUnitX[step] * (1000 - frac) + AimUnitX[nextStep] * frac) div 1000
-      unitY = (AimUnitY[step] * (1000 - frac) + AimUnitY[nextStep] * frac) div 1000
-    # 1024 is a power of two and the numerators are small integers, so both
-    # quotients are EXACT binary doubles on every target.
-    return (float(unitX) / 1024.0, float(unitY) / 1024.0)
   let
     (bx, by) = aimVector(headingBrads)
     jitter = gauss(sim.rng, 0.0, sim.aimJitterSigma(perks))

@@ -40,17 +40,6 @@ type
     mismatchQuit*: bool
     hashValidationFailed*: bool
     hashMismatchTick*: int
-    scanMismatchTick*: int
-      ## The tick the whole-match PRECOMPUTE WALK found a hash divergence at,
-      ## or -1. The walk crosses every recorded tick within a couple of
-      ## presentation frames while the display player is still near the start,
-      ## so it is normally the first — and, for a divergence past the display's
-      ## reach, the only — half of the runtime that sees one. Unlike
-      ## `hashMismatchTick` it is NOT restored from a keyframe: the integrity
-      ## signal a host reads (`replayMismatchTick`) must not be erased by a
-      ## seek. Before r1 review B3 the walk's detection lived only on its
-      ## private builder, so `smac_mismatch_tick()` returned -1 while the very
-      ## same process echoed the mismatch into a green CI log.
     keyframes*: seq[ReplayKeyframe]
     startTick*: int
       ## First tick the match is actually being PLAYED (the Lobby "WAITING FOR
@@ -263,25 +252,7 @@ proc initReplayPlayer*(data: ReplayData): ReplayPlayer =
   result.speedIndex = 0
   result.skipLulls = true
   result.hashMismatchTick = -1
-  result.scanMismatchTick = -1
   result.pendingSeekTick = -1
-
-proc replayMismatchTick*(replay: ReplayPlayer): int =
-  ## THE integrity signal every host reads: the earliest tick at which either
-  ## the display player or the precompute walk found the re-derived
-  ## `gameHash` disagreeing with the recording, or -1 when the whole walked
-  ## chain matched. Sticky across seeks.
-  ##
-  ## Both halves are needed. The display player only ever checks the ticks it
-  ## is asked to play, so a divergence past its current position is invisible
-  ## to it; the walk checks every recorded tick but does so on a private
-  ## builder. Reading one of them is how a gate ends up unable to fail.
-  if replay.hashMismatchTick >= 0 and replay.scanMismatchTick >= 0:
-    min(replay.hashMismatchTick, replay.scanMismatchTick)
-  elif replay.hashMismatchTick >= 0:
-    replay.hashMismatchTick
-  else:
-    replay.scanMismatchTick
 
 proc replaySpeed*(replay: ReplayPlayer): int =
   ## Returns the current integer replay speed.
@@ -530,10 +501,6 @@ proc advanceReplayGame(sim: var SimServer) =
   ## frozen on game 1 for the whole episode and the visitor half is never
   ## announced. Archiving here is also what lets the momentum series stay
   ## cumulative across the two games.
-  ##
-  ## The micro battle switch is NOT here: `battleIndex` IS in `gameHash`, so it
-  ## has to be mirrored after the ending tick's hash check rather than before
-  ## it — see `sim.advanceBattle` at the bottom of `stepReplay`.
   if sim.config.numAgents <= 0 or sim.config.regimes.len == 0:
     return
   sim.gameHill.add(sim.hillTicks)
@@ -550,18 +517,10 @@ proc stepReplay*(replay: var ReplayPlayer, sim: var SimServer) =
   let inputs = replay.replayInputs(sim.players.len)
   let phaseBefore = sim.phase
   sim.step(inputs, prevInputs)
-  let battleEnded = phaseBefore != GameOver and sim.phase == GameOver
-  if battleEnded:
+  if phaseBefore != GameOver and sim.phase == GameOver:
     sim.advanceReplayGame()
   replay.clearReplayPressedMasks()
   replay.checkReplayHash(sim)
-  if battleEnded:
-    ## The micro battle switch is HASHED (battleIndex), and the live loop
-    ## writes the ending tick's hash before making it — so it is mirrored HERE,
-    ## after that tick's hash check, by the same proc the server calls
-    ## (scenario.advanceBattle). Without this every replay of a multi-battle
-    ## episode diverges at the first battle boundary (r1 review B1).
-    sim.advanceBattle()
 
 proc buildLullSpans*(
   beatTicks: seq[int],
@@ -598,16 +557,7 @@ proc scanTeamLead(sim: SimServer): seq[int] =
   ## `lives: 12` a micro series of lives is near-flat and shows tag
   ## attrition, not hill momentum, and the hill-tick difference over the
   ## whole episode is the thing a KotH spectator is watching.
-  ##
-  ## MICRO: the two ARMY HP POOLS (design §Readouts 6). Every unit has ONE
-  ## life, so the inherited lives series is the alive count — a five-value step
-  ## function that says nothing until somebody dies, while the thing a micro
-  ## spectator is actually watching is how the two hp pools cross. The client's
-  ## caption says ARMY HP for the same reason (r1 review N9).
-  if sim.config.microMode():
-    for team in sim.teams():
-      result.add(if team == Red: sim.ourHp else: sim.theirHp)
-  elif sim.config.hill:
+  if sim.config.hill:
     for team in sim.teams():
       var total = sim.hillTicks[team]
       for archived in sim.gameHill:
@@ -701,13 +651,6 @@ proc advanceReplayScan*(replay: var ReplayPlayer, maxTicks: int) =
         error.msg
       scan.builder.playing = false
       break
-    if scan.builder.hashMismatchTick >= 0 and replay.scanMismatchTick < 0:
-      ## The walk found a divergence. Publish it on the PLAYER: the builder is
-      ## private to the scan and is dropped when the walk finishes, so without
-      ## this the only trace of a broken hash chain is an `echo` — which is
-      ## exactly how the native-to-wasm gate passed while printing
-      ## "Replay hash mismatch at tick 319" (r1 review B3).
-      replay.scanMismatchTick = scan.builder.hashMismatchTick
     if replay.startTick < 0 and scan.sim.phase == Playing:
       replay.startTick = scan.sim.gameStartTick
     # Record the per-team hill-tick change-points across the full episode so

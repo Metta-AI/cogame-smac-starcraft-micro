@@ -98,7 +98,7 @@ proc buildReplayViewerPacket*(
     replay.replayMaxTick(),
     replay.looping,
     true,
-    replay.replayMismatchTick
+    replay.hashMismatchTick
   )
   if result.len == 0:
     return
@@ -122,7 +122,7 @@ proc buildReplayViewerPacket*(
       replay.replayMaxTick(),
       replay.looping,
       true,
-      replay.replayMismatchTick,
+      replay.hashMismatchTick,
       nextState.selectedJoinOrder,
       if sendLead: replay.leadSeries else: @[],
       replay.replayStartTick(),

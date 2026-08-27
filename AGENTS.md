@@ -73,47 +73,6 @@ stay separate FILES so the CI float grep can read them on their own.
 * **Never add a variant without adding it to the manifest test's sweep** — it
   already builds and steps EVERY variant, including the 25-unit `corridor`.
 
-## RESOLVED: the wasm hash gate, and the divergence it could not fail on
-
-`tools/wasm_replay_smoke.cjs` used to print
-
-    Replay hash mismatch at tick 319; expected N, got M.
-
-on the certification-fixture replay and then exit 0. Both halves are fixed, and
-both fixes are load-bearing — do not undo either:
-
-1. **The cause** was `sim.battleIndex`: hashed state (`sim_state.nim`) written
-   only by the live tick loop, so every replay diverged one tick after the
-   first battle ended. The switch now lives in `scenario.advanceBattle`, called
-   on record AND on playback (`stepReplay`) — after the ending tick's hash
-   check, because the live loop writes that hash before the switch. Any future
-   state that a spectator-visible transition moves outside `sim.step` goes the
-   same way: ONE proc, both call sites, mind the order.
-2. **The gate** read the display player's own `hashMismatchTick` while the
-   precompute walk — the half that crosses every recorded tick — detected the
-   divergence on its private builder. `replays.replayMismatchTick` now reports
-   both halves, the walk publishes into `scanMismatchTick` (sticky across
-   seeks), and the gate drives playback to the LAST recorded tick instead of a
-   fixed 300 frames. A gate that cannot fail is not a gate.
-
-Three genuine floating-point values were found and removed from the hashed path
-while chasing this, and each moved the tick without clearing it — they were all
-real, keep them integer:
-
-1. `tan(halfAngle)` in the micro arc wedge (new in this fork) -> the integer
-   `AimUnitX/AimUnitY` cross/dot test;
-2. the ranger's Gaussian shot jitter (`gauss` + `sin`/`cos`, inherited but
-   never exercised by the starter, whose paint loadout has no gun) -> an
-   integer milli-brad draw off the same table;
-3. the scripted army's `bradsOfVector` (`arctan2` + `round`) -> the integer
-   `bradsOfVectorInt`.
-
-`tests/test_replay.nim` re-derives a full three-battle recording natively, hash
-for hash, so a regression is red in the test job as well as in the wasm gate.
-
-Do not "fix" a future warning by deleting it. The per-tick hash chain is the
-whole reason the enemy army costs zero replay bytes.
-
 ## CI is the only harness
 
 There is no Nim, no Docker and no emsdk in the authoring sandbox. `ci.yml` runs:
@@ -125,18 +84,7 @@ There is no Nim, no Docker and no emsdk in the authoring sandbox. `ci.yml` runs:
   `SMOKE_REQUIRE_REPLAY_JSON=0` (the replay is binary `COWLDSMC`);
 * the `wasm-viewer` job — builds the bundle, **executes** it in headless
   chromium against the replay `docker-smoke` produced, then runs
-  `tools/wasm_replay_smoke.cjs` as the native-to-wasm hash gate;
-* the **worst-case text fixture**: `tools/record_text_fixture.nim` records a
-  replay with a full-cap `say` on every unit at once, a full-cap 160-rune note
-  per seat and both lines spawned into the arena corners, and
-  `replay-viewer/text_fixture.html` plays it through the real renderer at three
-  canvas sizes under `viewer_smoke.mjs --strict-text-bounds`. Every replay CI
-  can otherwise produce carries ZERO model text (no API key ⇒ scripted seats ⇒
-  no `say`, no `note`), so this is the only gate that draws the chrome that
-  exists to show what a model said. `tests/test_shouts.nim` asserts the same
-  invariants natively; both read `global.shoutTextReportJson`, because this
-  board's text is rasterized in Nim and blitted — no canvas `fillText` exists
-  for a browser harness to measure.
+  `tools/wasm_replay_smoke.cjs` as the native-to-wasm hash gate.
 
 `tools/replay_summary.py` (standard library only) is the strict-UTF-8 JSON view
 of a binary replay, for forensics and for the phase-60 check.

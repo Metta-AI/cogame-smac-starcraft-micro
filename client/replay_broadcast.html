@@ -641,38 +641,6 @@ html, body {
 .fpv-gear .carry { color: var(--amber); font-weight: 600; }
 .fpv-dead .fpv-hp, .fpv-dead .fpv-gear { opacity: 0.4; }
 
-/* Un-fogged tactical minimap inset: top-right corner, BOARD aspect. Compact and
-   see-through so it reads as an overlay on the raycast, not a lid over it. A
-   quiet hairline frames it as a genuine window. pointer-events:none so grabbing
-   it still drags the whole PiP.
-   The width/aspect-ratio here are PRE-STREAM DEFAULTS (the classic arena) —
-   syncFpvMapShape() overwrites both from the streamed map's real w/h, because a
-   four-team board is square and a fixed 1.874:1 inset squashes it.
-   INHERITED, restored: the markup (#fpv-map / #fpv-map-canvas) and the JS that
-   drives it are both still here, so deleting these two rules left the inset an
-   unpositioned block inside #fpv (r1 review N7a). #fpv itself is unchanged. */
-.fpv-map {
-  position: absolute;
-  top: calc(4 * var(--u));
-  right: calc(4 * var(--u));
-  width: 38%;
-  aspect-ratio: 1235 / 659;
-  background: rgba(8, 5, 3, 0.42);
-  box-shadow: 0 0 0 1px rgba(232, 163, 61, 0.28);
-  overflow: hidden;
-  z-index: 2;
-  opacity: 0.9;
-  pointer-events: none;
-}
-.fpv-map canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  image-rendering: pixelated;
-}
-
 /* ---------- 4b. VIEW CONTROLS: REMOVED ----------
    The board is the FIXED 1235 x 659 arena and relayout() always fits it whole
    inside the frame, so per the design pin a fixed arena drops #viewpanel
@@ -1758,11 +1726,11 @@ body[data-embed] #board { top: 0; height: 100%; }
     canvas: canvas,
     onText: function (txt) { onFrame(txt); },
     onStatus: function (st) { onStatus(st); },
-    onFirstFrame: function () { core.setViewportFit(); },
+    onFirstFrame: function () { core.setViewportFit(); syncViewUi(); },
     // The core owns the view, so it tells the controls where it ended up —
     // never the other way round. That keeps the slider honest when the zoom
     // moved for some other reason (a pinch, an arrow key, a refit, a new board).
-    onTransform: function (t) { /* the zoom readout and the minimap are gone */ }
+    onTransform: function (t) { syncViewUi(t); }
   };
   var core = replayAdapter
     ? replayAdapter.createCore(coreConfig)
@@ -4050,9 +4018,9 @@ body[data-embed] #board { top: 0; height: 100%; }
      minimap #minimap/#minimap-canvas — this board is the FIXED 1235 x 659
      arena and relayout() always fits it whole), the heart/flag scorebug fields
      (.flagicon, .carrier-tag) and the .ec-heart endcard glyphs, the hill chips
-     and the paint-coverage arc, the beat CSS for the five kinds this game
-     never emits (the flag beats and the paint-mode beats), and the
-     perk/handicap badges.
+     and the paint-coverage arc, the .beat-marker.steal/.return/.capture/
+     .hillflip/.hillhold CSS rules (their kinds are never emitted here), and
+     the perk/handicap badges.
 
      KEPT IN FULL: #viewport, #stage, #board, #lightpool, #grain, #lockerroom,
      #chrome, #scorebug with #plates-l/#plates-r/#clock, #bannerlane,
@@ -4118,20 +4086,17 @@ body[data-embed] #board { top: 0; height: 100%; }
 .plate.down .smac-hpfill { background: var(--paper-dim); }
 
 /* --- the two army-strength bars: the bars ARE the score ---------------- */
-/* A full-width double strip immediately under the scorebug's plates and INSIDE
-   the top band — so it is the scorebug's own second row rather than an overlay
-   on top of it. It used to be absolutely positioned in #chrome at
-   `top: --topband - 14u`, i.e. 14 u above the BOTTOM of a three-plate-tall
-   band, which put both rows straight across the plate columns: CI's own
-   viewer-smoke.png showed the OURS bar struck through "Unit B" and the THEIRS
-   numerals printed over "Unit D DMG 210" (r1 review B6). As a grid row the
-   band MEASURES it — relayout() reads scorebug.offsetHeight into --topband —
-   so nothing overlaps at any width and nothing sits over play. */
+/* A full-width double strip immediately under the scorebug, inside the TOP
+   band — never in the transport band. */
 #armybars {
-  grid-column: 1 / -1;
+  position: absolute;
+  left: calc(6 * var(--u));
+  right: calc(6 * var(--u));
+  top: calc(var(--topband, 0px) - (14 * var(--u)));
   display: flex;
   flex-direction: column;
   gap: calc(2 * var(--u));
+  z-index: 6;
   pointer-events: none;
   font-family: var(--finefont);
   font-size: calc(7 * var(--u));
@@ -4210,14 +4175,7 @@ body[data-embed] #board { top: 0; height: 100%; }
 
 /* --- 360 px legibility ------------------------------------------------- */
 /* relayout() already sets --hudscale = clamp(0.5, boardW/760, 1.6) and toggles
-   #stage.tiny at boardW <= 620; these rules are this game's own. The plate
-   LABEL goes with the kill numeral: the starter hides `.lives-label` under
-   .tiny for exactly this reason, and the micro plate's `Dmg` label carries
-   both that class and `.smac-lbl`, so under the embedded featured-match width
-   a plate keeps only glyph + name + damage + hp bar and the NAME gets the
-   room (acceptance item 11, r1 review B5). */
-#stage.tiny .plate .lives-label,
-#stage.tiny .plate .smac-lbl { display: none; }
+   #stage.tiny at boardW <= 620; these three rules are this game's own. */
 #stage.tiny .plate .smac-kills { display: none; }
 #stage.tiny .armyrow .arow-notch { display: none; }
 #stage.tiny .armyrow .arow-cap { width: calc(24 * var(--u)); }
@@ -4286,12 +4244,7 @@ body[data-embed] #board { top: 0; height: 100%; }
   // --- the two army bars -------------------------------------------------
   function ensureArmyBars() {
     if ($('armybars')) return;
-    // Into #scorebug, as its own full-width grid row: the band's measured
-    // height then includes the bars and relayout() reserves the lot, so the
-    // strip can never be drawn over the plates or over the board (B6).
-    // ensureScorebug() only ever clears #plates-l / #plates-r, so this row
-    // survives every plate rebuild.
-    var chrome = $('scorebug') || $('chrome') || document.body;
+    var chrome = $('chrome') || document.body;
     var wrap = document.createElement('div');
     wrap.id = 'armybars';
     wrap.innerHTML =
@@ -4453,22 +4406,10 @@ body[data-embed] #board { top: 0; height: 100%; }
     return false;
   }
 
-  // The momentum graph plots scanTeamLead, which under micro is the two ARMY
-  // HP pools rather than lives (one life per unit makes the inherited series
-  // an alive-count staircase). The inherited caption is retargeted here, from
-  // the appended block, so no inherited markup changes for it.
-  function renderMomentumLabel() {
-    var label = document.querySelector('#scrub .momentum-label');
-    if (label && label.textContent !== 'ARMY HP LEAD') {
-      label.textContent = 'ARMY HP LEAD';
-    }
-  }
-
   function smacFrame(s, ctx, jumped) {
     CTX = ctx;
     var m = s.micro;
     if (!m) return;
-    renderMomentumLabel();
     renderArmyBars(m);
     renderFocusRing(s);
     renderCaption(s);

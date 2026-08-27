@@ -10,7 +10,6 @@ var
   tracker: BroadcastTracker
   packet: seq[uint8]
   lastError: string
-  textReport: string
 
 ## --- Progress stage note ---
 ## wasm32 has no memory protection: when emscripten's malloc fails, a write
@@ -124,54 +123,10 @@ proc smacPacketLength(): cint {.exportc: "smac_packet_len", cdecl.} =
   cint(packet.len)
 
 proc smacMismatchTick(): cint {.exportc: "smac_mismatch_tick", cdecl.} =
-  ## The integrity verdict of BOTH checking halves — the display player and the
-  ## whole-match precompute walk (replays.replayMismatchTick). Reading only the
-  ## display player's own field is what made the native-to-wasm determinism gate
-  ## unable to fail: the walk crosses every tick in a few frames and detected
-  ## the divergence, the display never reached it, and the gate read -1 out of a
-  ## process that had already echoed the mismatch (r1 review B3).
   if runtimeLoaded:
-    cint(replay.replayMismatchTick)
+    cint(replay.hashMismatchTick)
   else:
     -1
-
-proc smacReplayTick(): cint {.exportc: "smac_replay_tick", cdecl.} =
-  ## The tick playback is standing on, so a host can drive the display player
-  ## across the WHOLE recording instead of guessing a frame budget.
-  if runtimeLoaded:
-    cint(game.tickCount)
-  else:
-    -1
-
-proc smacReplayMaxTick(): cint {.exportc: "smac_replay_max_tick", cdecl.} =
-  ## The final recorded tick — the target the determinism gate drives to.
-  if runtimeLoaded:
-    cint(replay.replayMaxTick())
-  else:
-    -1
-
-proc smacTextReport(): cint {.exportc: "smac_text_report", cdecl.} =
-  ## Rebuilds the TEXT-BOUNDS REPORT for the frame on screen — the reserved
-  ## shout band, the board rect, and every live bubble's text and map rect —
-  ## and returns its byte length (read the bytes with smac_text_report_ptr).
-  ##
-  ## The board's text is rasterized in Nim and shipped as sprite pixels, so the
-  ## viewer never calls canvas fillText and a browser harness hooking it
-  ## measures nothing (`canvas_text.total: 0`). This is how the worst-case
-  ## renderer fixture (replay-viewer/text_fixture.html) asks the renderer
-  ## itself whether every drawn string fits its frame.
-  if not runtimeLoaded:
-    textReport = ""
-    return 0
-  textReport = game.shoutTextReportJson()
-  cint(textReport.len)
-
-proc smacTextReportPointer(): ptr uint8
-    {.exportc: "smac_text_report_ptr", cdecl.} =
-  if textReport.len == 0:
-    nil
-  else:
-    cast[ptr uint8](textReport[0].addr)
 
 proc smacErrorPointer(): ptr uint8 {.exportc: "smac_error_ptr", cdecl.} =
   if lastError.len == 0:

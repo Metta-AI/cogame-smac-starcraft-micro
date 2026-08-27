@@ -13,7 +13,7 @@
 ## here means "a partner whose published rules you know".
 
 import
-  std/[algorithm, strutils],
+  std/strutils,
   sim, control, directives
 
 type
@@ -96,26 +96,6 @@ proc nearestMeleeEnemy(sim: SimServer, cogIndex: int): int =
       best = d
       result = j
 
-proc nthDeepestEnemy(sim: SimServer, x, y, rank: int): int =
-  ## The `rank`-th FARTHEST living enemy from a map point (0 = farthest),
-  ## ranked by integer squared distance with the enemy id as the tie-break so
-  ## the order is total and machine-independent. The rank wraps when fewer
-  ## enemies are standing than it asks for, so a five-unit squad always has a
-  ## target. -1 when the enemy army is gone.
-  var ranked: seq[(int, int, int)] = @[]   # (distSq, enemy id, cog index)
-  for j in sim.config.friendlyCount() ..< sim.players.len:
-    if not sim.players[j].alive:
-      continue
-    ranked.add((
-      distSq(x, y, sim.players[j].x + CollisionW div 2,
-             sim.players[j].y + CollisionH div 2),
-      sim.config.enemyIdOf(j),
-      j))
-  if ranked.len == 0:
-    return -1
-  ranked.sort()
-  ranked[ranked.high - (rank mod ranked.len)][2]
-
 proc scriptedDirective*(
   ctl: ControlState,
   sim: SimServer,
@@ -124,26 +104,17 @@ proc scriptedDirective*(
 ): SquadDirective =
   ## The directive one baseline issues for the units it governs this turn.
   ##
-  ## `focusfire` — every RANGED unit derives the SAME kill order from state
-  ## alone and shoots it from a per-seat standoff post. A ranger `focus`es it
-  ## unless a melee enemy is inside `panicPx`, in which case it `kite`s that
-  ## enemy — it is worth more alive at 300 px than dead at 50. A blade
-  ## `screen`s while a friendly ranger is alive and a melee enemy is closing on
-  ## it; otherwise it `focus`es the shared kill order while the squad is not
-  ## outnumbered, and the enemy nearest ITSELF when it is — a melee unit cannot
-  ## concentrate fire from where it stands, it can only walk, and five blades
-  ## walking at one unit of a bigger army are a pile, not a focus.
+  ## `focusfire` — every governed unit derives the SAME kill order from state
+  ## alone. A ranger `focus`es it unless a melee enemy is inside `panicPx`, in
+  ## which case it `kite`s that enemy — it is worth more alive at 300 px than
+  ## dead at 50. A blade `screen`s while a friendly ranger is alive and a melee
+  ## enemy is closing on it, otherwise `focus`es the kill order.
   ##
-  ## `charge` — weaker BY CONSTRUCTION and different in SHAPE, so the ladder
-  ## gets a spread rather than two versions of one bot: unit k `attack_move`s at
-  ## the (k + turn)-th DEEPEST living enemy in the formation as seen from our
-  ## squad centre, and nobody kites or screens. Three weaknesses in one rule —
-  ## the squad pushes to the far side of the enemy army and fights it from the
-  ## inside (our damage is cooldown-capped, the number of enemies in contact is
-  ## not), the damage splits five ways instead of killing anything, and the
-  ## rotating rank abandons a half-killed enemy every turn.
-  ## tests/test_control.nim pins `focus > charge` on all four shipped
-  ## compositions.
+  ## `charge` — deliberately weaker and different in SHAPE, so the ladder gets
+  ## a spread rather than two versions of one bot: every unit `attack_move`s at
+  ## the living enemy nearest ITSELF, every turn. Nobody kites, nobody screens,
+  ## nobody shares a target, so the squad splits its damage across the whole
+  ## enemy army and loses the trade.
   result.source = dsScripted
   result.note = (if kind == blCharge: "charge" else: "focus fire")
   if governed.len == 0:
@@ -176,23 +147,7 @@ proc scriptedDirective*(
       result.orders.add(order)
       continue
     if kind == blCharge:
-      ## OVER-COMMIT, AND NEVER COMMIT. Three deliberate weaknesses in one
-      ## integer rule, and every one of them is a real bad habit:
-      ##   * the target is measured from OUR SQUAD CENTRE, deepest first, so
-      ##     the whole squad pushes to the FAR side of the enemy formation and
-      ##     ends up fighting it from the inside — our damage is capped by the
-      ##     weapon cooldown, the number of enemies in contact with us is not;
-      ##   * the rank is seat-indexed, so five units pick five different enemies
-      ##     and the damage splits instead of killing anything;
-      ##   * the rank also rotates with the TURN, so a half-killed enemy is
-      ##     abandoned every turn. Nobody kites, nobody screens, nobody
-      ##     finishes.
-      ## Still a pure function of the state (turn = gameTicksElapsed div
-      ## turnTicks), so it is as re-derivable as the rest of the baseline.
-      let
-        centre = microCentre(sim)
-        turn = sim.gameTicksElapsed() div max(1, sim.config.turnTicks)
-        near = sim.nthDeepestEnemy(centre.x, centre.y, cogIndex + turn)
+      let near = sim.livingEnemyNearest(px, py)
       let pick = (if near >= 0: near else: order0)
       order.intent = intAttackMove
       order.targetId = sim.config.enemyIdOf(pick)
@@ -216,30 +171,6 @@ proc scriptedDirective*(
         order.targetY = sim.players[threat].y + CollisionH div 2
         order.say = "kite"
     else:
-      ## MELEE, and the one place focus fire has to know the shape of the
-      ## fight. A blade cannot concentrate damage from where it stands — it can
-      ## only walk — so five of them sent at ONE enemy arrive as a pile.
-      ##
-      ## While our squad is NOT outnumbered it still joins the shared kill
-      ## order: the enemies are few and tough, killing the focused one removes
-      ## real damage, and overkill is cheap. Outnumbered, it hits the enemy
-      ## nearest ITSELF: against a bigger army the units are many and thin,
-      ## three arcs into one dying body is wasted damage, and everything the
-      ## pile is not facing keeps swinging. MEASURED, focus vs charge at the
-      ## pinned seed (tests/test_control.nim echoes the table every run):
-      ##
-      ##   5v5  2r3b vs 2r3b     share: 934 > 932   nearest: 922 < 932
-      ##   5v20 blades vs swarm  share: 925 < 942   nearest: 944 > 942
-      ##
-      ## The gate is the ARMY SIZES, not the live alive counts, so one early
-      ## loss cannot flip a squad's whole plan mid-battle.
-      if sim.config.enemyCount() > sim.config.friendlyCount():
-        let near = sim.livingEnemyNearest(px, py)
-        if near >= 0:
-          order.targetId = sim.config.enemyIdOf(near)
-          order.targetX = sim.players[near].x + CollisionW div 2
-          order.targetY = sim.players[near].y + CollisionH div 2
-          order.say = sim.cogAlias(near)
       let ranger = weakestRanger(sim)
       if ranger >= 0:
         let threat = nearestMeleeEnemy(sim, ranger)
