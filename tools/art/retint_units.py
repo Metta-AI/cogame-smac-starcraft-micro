@@ -82,4 +82,5 @@ def main():
             retint(Image.open(src_p), p).save(dst)
         print('retinted', team)
 
-main()
+if __name__ == "__main__":
+    main()
