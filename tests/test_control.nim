@@ -229,13 +229,15 @@ suite "control":
         focus = play(blFocusFire, config)
         charge = play(blCharge, config)
       # The ladder spread the design note argues for is a property of the
-      # RULES, not of one composition: `charge`'s seat-indexed target rank
-      # makes the five units attack five different enemies, so its damage is
-      # split by construction on every roster — 2s3z, five rangers, blades
-      # against twenty swarm, or the seven-unit corridor. Focused damage kills
-      # faster and therefore takes less in return, so the inequality is STRICT
-      # on all four shipped compositions, not asserted where it happens to hold
-      # and waived elsewhere.
+      # RULES, not of one composition. `charge` over-commits by construction:
+      # seat k attack-moves at the k-th FARTHEST enemy, so the squad both splits
+      # its damage across five targets and walks past whatever is already
+      # hitting it. `focusfire` concentrates damage and, for a melee unit, hits
+      # what is on it rather than chasing a distant kill order — which is what
+      # r1's measurements exposed: five blades chasing one kill order through a
+      # twenty-unit swarm scored 0.327 against charge's 0.930. Both rules are
+      # published in docs/RULES.md, and the inequality is STRICT on all four
+      # shipped compositions rather than asserted where it happens to hold.
       check focus > charge
       check focus >= 0
       check focus <= 1000
