@@ -2022,7 +2022,7 @@ proc buildIdentityBadgeSprite(
   ## floating upright over a body that rotated out from under it.
   let
     size = IdentityBadgeSize * scale
-    base = Palette[teamColor(team) and 0x0f]
+    base = teamDisplayColor(team)
     c = float(size - 1) / 2
   result = newRgbaPixels(size, size)
   for y in 0 ..< size:
@@ -2654,8 +2654,7 @@ proc buildSplatterSprite(colorIndex, stage: int): seq[uint8] {.measure.} =
   ## color at stage 0 that grows sparser and darker toward the last stage.
   result = newRgbaPixels(SplatterSize, SplatterSize)
   let
-    color = PlayerColors[colorIndex and 0x0f]
-    shade = ShadowMap[color and 0x0f]
+    trueColor = teamPaintRgba(PlayerColors[colorIndex and 0x0f])
     half = SplatterSize div 2
   for y in 0 ..< SplatterSize:
     for x in 0 ..< SplatterSize:
@@ -2669,9 +2668,14 @@ proc buildSplatterSprite(colorIndex, stage: int): seq[uint8] {.measure.} =
       noise = (noise xor (noise shr 13)) * 1274126177'u32
       let density = 120 - stage * 25 - d2 * 2
       if int((noise shr 16) mod 100) < density:
-        result.putRgbaPixel(
+        # True team display color; late stages darken toward its shadow.
+        let dim = if stage >= SplatterStages div 2: 2 else: 5
+        result.putRawRgbaPixel(
           y * SplatterSize + x,
-          if stage >= SplatterStages div 2: shade else: color
+          uint8(trueColor.r.int * dim div 5),
+          uint8(trueColor.g.int * dim div 5),
+          uint8(trueColor.b.int * dim div 5),
+          255
         )
 
 proc buildHitSparkSprite(colorIndex, stage: int): seq[uint8] {.measure.} =
@@ -2686,22 +2690,27 @@ proc buildHitSparkSprite(colorIndex, stage: int): seq[uint8] {.measure.} =
   result = newRgbaPixels(HitSplatSize, HitSplatSize)
   let
     base = teamPaintRgba(PlayerColors[colorIndex and 0x0f])
-    # Paint stays bright: lighten the team color a touch so it never muddies,
-    # and keep a wet-highlight color near white for the sheen.
-    paintR = uint8((base.r.int * 3 + 255) div 4)
-    paintG = uint8((base.g.int * 3 + 255) div 4)
-    paintB = uint8((base.b.int * 3 + 255) div 4)
-    sheenR = uint8((base.r.int + 255 * 3) div 4)
-    sheenG = uint8((base.g.int + 255 * 3) div 4)
-    sheenB = uint8((base.b.int + 255 * 3) div 4)
-    # Dark contour = a deep version of the SAME hue (not brown), so the edge
-    # reads as shadowed paint, keeping the team color unambiguous.
-    edgeR = uint8(base.r.int * 2 div 5)
-    edgeG = uint8(base.g.int * 2 div 5)
-    edgeB = uint8(base.b.int * 2 div 5)
+    # A plasma impact COOLS as it ages: stage 0 is a white-hot flash with a
+    # team-ember rim; the last stage is a charred scorch whose rim keeps only
+    # a whisper of ember. Live fire stays the brightest thing on the field;
+    # residue goes dark (StarCraft-look brief).
+    stageF = stage.float / float(SplatterStages - 1)
+    heat = 1.0 - stageF
+    # Core: white-hot -> near-black char (hue whisper keeps sides tellable).
+    coreR = uint8(clamp(float(base.r.int + 255 * 3) / 4 * heat +
+      float(24 + base.r.int div 8) * stageF, 0, 255))
+    coreG = uint8(clamp(float(base.g.int + 255 * 3) / 4 * heat +
+      float(22 + base.g.int div 8) * stageF, 0, 255))
+    coreB = uint8(clamp(float(base.b.int + 255 * 3) / 4 * heat +
+      float(26 + base.b.int div 8) * stageF, 0, 255))
+    # Rim: team ember, dimming with age but always the mark's brightest part
+    # once the flash has cooled.
+    emberR = uint8(clamp(float(base.r) * (0.55 + 0.45 * heat), 0, 255))
+    emberG = uint8(clamp(float(base.g) * (0.55 + 0.45 * heat), 0, 255))
+    emberB = uint8(clamp(float(base.b) * (0.55 + 0.45 * heat), 0, 255))
     c = float(HitSplatSize - 1) / 2
-    # Alpha-only fade: full at stage 0, thinning to a faint stain by the last.
-    fade = 1.0 - 0.62 * (stage.float / float(SplatterStages - 1))
+    # Alpha fade: the flash is loud, the scorch settles to a quiet mark.
+    fade = 1.0 - 0.55 * stageF
     coreR2 = HitSplatCoreR * HitSplatCoreR
   # Six flung droplets ring the core (fixed offsets → deterministic sprite).
   const droplets = [(-8, -3, 2.4), (7, -6, 2.0), (9, 4, 2.6),
@@ -2732,19 +2741,21 @@ proc buildHitSparkSprite(colorIndex, stage: int): seq[uint8] {.measure.} =
             break
       if not inShape:
         continue
-      # Wet sheen: a small bright offset lobe up-left inside the core.
+      # White-hot spot: a small offset lobe inside the core, only while the
+      # impact is still hot (it cools away with the flash).
       let
         sxr = dx + 2.0
         syr = dy + 2.0
-        sheen = d2 <= coreR2 and (sxr * sxr + syr * syr) <= 5.2 * 5.2 and
+        sheen = heat > 0.5 and d2 <= coreR2 and
+          (sxr * sxr + syr * syr) <= 5.2 * 5.2 and
           (int((noise shr 9) mod 5) > 0)
       var r, g, b: uint8
       if onEdge:
-        (r, g, b) = (edgeR, edgeG, edgeB)
+        (r, g, b) = (emberR, emberG, emberB)
       elif sheen:
-        (r, g, b) = (sheenR, sheenG, sheenB)
+        (r, g, b) = (255'u8, 255'u8, 255'u8)
       else:
-        (r, g, b) = (paintR, paintG, paintB)
+        (r, g, b) = (coreR, coreG, coreB)
       result.putRawRgbaPixel(
         y * HitSplatSize + x, r, g, b,
         uint8(clamp(255.0 * fade, 0.0, 255.0))
@@ -2771,13 +2782,13 @@ proc buildPaintStainSprite(
   result = newRgbaPixels(outSize, outSize)
   let
     base = teamPaintRgba(PlayerColors[colorIndex and 0x0f])
-    # Keep the hue saturated and let ALPHA do all the subtlety. The stain has to
-    # stay translucent enough that the floor's concrete — control joints, cracks,
-    # grain — reads straight through it, which is the whole difference between
-    # "paint soaked into terrain" and "a colored blob dropped on top of it".
-    paintR = uint8(min(255, base.r.int * 92 div 100))
-    paintG = uint8(min(255, base.g.int * 92 div 100))
-    paintB = uint8(min(255, base.b.int * 92 div 100))
+    # A dried mark is a SCORCH, not paint: mostly char with a whisper of the
+    # shooter's ember hue, translucent enough that the deck plating reads
+    # straight through it. Residue stays quiet so live plasma is the only
+    # bright thing on the field (StarCraft-look brief).
+    paintR = uint8(min(255, (base.r.int * 34 + 20 * 66) div 100))
+    paintG = uint8(min(255, (base.g.int * 34 + 18 * 66) div 100))
+    paintB = uint8(min(255, (base.b.int * 34 + 24 * 66) div 100))
     c = float(outSize - k) / 2
     fs = float(outSize)
     v = float(variant)
@@ -3933,10 +3944,12 @@ proc buildSmoothShoutBubble(
     logicalH = max(1, (outH + native - 1) div native)
     canvasW = logicalW * native
     canvasH = logicalH * native
-    edge = Palette[teamColor(team) and 0x0f]
+    edge = teamDisplayColor(team)
     edgeColor = color(
       float32(edge.r) / 255, float32(edge.g) / 255, float32(edge.b) / 255, 1)
-    paperColor = color(1, 241 / 255, 232 / 255, 240 / 255)
+    # Dark comms chip, not cream paper: the shout reads as unit radio
+    # traffic over the dark deck, with the team edge carrying identity.
+    paperColor = color(23 / 255, 28 / 255, 37 / 255, 242 / 255)
     stroke = float32(k)
     radius = float32(2 * k)
     tailCx = float32(pillW div 2)
@@ -3962,7 +3975,7 @@ proc buildSmoothShoutBubble(
   image.fillPath(pillPath, paperColor)
   image.strokePath(pillPath, edgeColor, strokeWidth = stroke)
   font.paint = newPaint(SolidPaint)
-  font.paint.color = color(30 / 255, 24 / 255, 20 / 255, 1)
+  font.paint.color = color(242 / 255, 232 / 255, 216 / 255, 1)
   image.fillText(font, text,
     translate(vec2(float32(ShoutPadX * k), float32(ShoutPadY * k))))
   result.width = logicalW
@@ -4014,8 +4027,8 @@ proc buildShoutBubble*(
   text: string,
   zoom = 1
 ): tuple[width, height: int, pixels: seq[uint8]] {.measure.} =
-  ## A kid-friendly comic speech bubble for one shout: dark ink on a cream
-  ## "paper" pill with rounded corners, a chunky team-colored outline, and a
+  ## The shout pill: light text on a dark comms chip with rounded corners,
+  ## a chunky team-colored outline, and a
   ## little tail pointing down at the shouter. Drawn with the chunky 9px shout
   ## font (not the 6px tiny5 HUD font) so it reads at full desktop size, and
   ## in-world with the rest of the pixel art — never as an HD overlay. On the
@@ -4035,7 +4048,7 @@ proc buildShoutBubble*(
     pillH = font.height + 2 * ShoutPadY
     width = pillW
     height = pillH + ShoutTailH
-    edge = Palette[teamColor(team) and 0x0f]  # team-colored outline
+    edge = teamDisplayColor(team)  # team-colored outline
     tailCx = pillW div 2                       # tail centered under the pill
   result.width = width
   result.height = height
@@ -4063,7 +4076,7 @@ proc buildShoutBubble*(
       if onEdge:
         result.pixels.putRawRgbaPixel(i, edge.r, edge.g, edge.b, 255)
       else:
-        result.pixels.putRawRgbaPixel(i, 255, 241, 232, 240)  # palette paper
+        result.pixels.putRawRgbaPixel(i, 23, 28, 37, 242)  # dark comms chip
 
   # Tail: a shrinking triangle of paper with a team-colored left/right lip,
   # so the bubble points at the shouter's head.
@@ -4079,12 +4092,12 @@ proc buildShoutBubble*(
       if dx == -half or dx == half or row == ShoutTailH - 1:
         result.pixels.putRawRgbaPixel(i, edge.r, edge.g, edge.b, 255)
       else:
-        result.pixels.putRawRgbaPixel(i, 255, 241, 232, 240)
+        result.pixels.putRawRgbaPixel(i, 23, 28, 37, 242)
 
   # Bold dark ink text in the chunky shout font, centered on the paper.
   result.pixels.blitFontText(
     width, height, font, text,
-    ShoutPadX, ShoutPadY, 0'u8,  # palette 0 = near-black ink
+    ShoutPadX, ShoutPadY, 2'u8,  # palette 2 = near-white, light-on-chip
     bold = true
   )
 
@@ -4427,7 +4440,7 @@ proc buildFlagAuraSprite(team: Team): seq[uint8] {.measure.} =
   let outSize = FlagAuraSize * boardScale
   result = newRgbaPixels(outSize, outSize)
   let
-    base = Palette[teamColor(team) and 0x0f]
+    base = teamDisplayColor(team)
     c = float(outSize - boardScale) / 2
   for y in 0 ..< outSize:
     for x in 0 ..< outSize:

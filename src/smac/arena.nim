@@ -150,6 +150,8 @@ proc validateMap(gameMap: SmacMap) =
 const
   ArenaName = "arena"
   ArenaLargeName = "arena-large"
+  PlainsName = "plains"
+  MicroCorridorName = "corridor"
   ArenaBorder* = 10            ## perimeter wall thickness in px.
 
   ## Warm CRT-phosphor arena (REPLAY_DESIGN §3 art-lock): neutral-warm grey
@@ -721,6 +723,82 @@ proc arenaLargeSmacMap(): SmacMap =
   result.medKitSpawns = @[
     MapPoint(x: result.width div 2, y: result.height div 3),
     MapPoint(x: result.width div 2, y: 2 * result.height div 3),
+  ]
+  result.medKitCandidates = result.medKitSpawns
+  result.rooms = result.defaultSmacRooms()
+  result.validateMap()
+
+proc plainsSmacMap(): SmacMap =
+  ## The SMAC-style open battlefield: the arena's exact box and clearances
+  ## with NO interior obstacles — original geometry in the shape of the flat
+  ## line-battle maps the micro scenarios descend from (2s3z, 5m_vs_6m,
+  ## 3s5z_vs_3s6z). Two armies, 475 px of open deck between them; every
+  ## fight is positioning, focus fire and kiting, never cover.
+  result.name = PlainsName
+  result.path = PlainsName
+  result.width = 1235
+  result.height = 659
+  result.mapLayer = 0
+  result.walkLayer = 1
+  result.wallLayer = 2
+  result.center = MapPoint(x: result.width div 2, y: result.height div 2)
+  result.flagRing = 70
+  result.captureClear = 210
+  result.spawnClearW = 70
+  result.spawnClearH = 130
+  result.gunRange = GunRange
+  result.leftObstacles = @[]
+  result.medKitSpawns = @[
+    MapPoint(x: result.width div 2, y: result.height div 3),
+    MapPoint(x: result.width div 2, y: 2 * result.height div 3),
+  ]
+  result.medKitCandidates = result.medKitSpawns
+  result.rooms = result.defaultSmacRooms()
+  result.validateMap()
+
+proc corridorSmacMap(): SmacMap =
+  ## The SMAC-style corridor: the arena's box with one center CHOKE — two
+  ## wall slabs pinch the field down to a 104 px doorway on the spawn axis,
+  ## in the shape of the corridor scenario this game's 5-blades-vs-20-swarm
+  ## variant descends from. The swarm must stream through the doorway; five
+  ## blades that hold the line kill it one body at a time, and a blade that
+  ## chases through is surrounded. Authored on the left half (slab x
+  ## 500..617); the x-mirror completes a continuous 500..735 tunnel whose
+  ## mouths face both spawn columns.
+  const
+    ChokeX = 500               ## left slab edge; mirror closes at 735.
+    ChokeW = 118               ## authored to the center; union stays solid.
+    ChokeHalfGap = 52          ## doorway half-height: a 104 px channel.
+  result.name = MicroCorridorName
+  result.path = MicroCorridorName
+  result.width = 1235
+  result.height = 659
+  result.mapLayer = 0
+  result.walkLayer = 1
+  result.wallLayer = 2
+  result.center = MapPoint(x: result.width div 2, y: result.height div 2)
+  ## The protected center disc spans 2 x flagRing; at the arena's 70 it would
+  ## carve 140 px bites out of the slabs around the doorway. 24 keeps the
+  ## whole disc inside the 104 px channel, so the choke walls stay solid.
+  result.flagRing = 24
+  result.captureClear = 210
+  result.spawnClearW = 70
+  result.spawnClearH = 130
+  result.gunRange = GunRange
+  let midY = result.height div 2
+  result.leftObstacles = @[
+    ArenaShape(kind: shapeRect, rect: MapRect(
+      x: ChokeX, y: ArenaBorder - 2,
+      w: ChokeW, h: midY - ChokeHalfGap - (ArenaBorder - 2))),
+    ArenaShape(kind: shapeRect, rect: MapRect(
+      x: ChokeX, y: midY + ChokeHalfGap,
+      w: ChokeW, h: result.height - (ArenaBorder - 2) - (midY + ChokeHalfGap))),
+  ]
+  ## Micro spawns no pickups; keep the kit points on open floor INSIDE the
+  ## doorway anyway so no clearance rule ever has to touch the slabs.
+  result.medKitSpawns = @[
+    MapPoint(x: result.width div 2, y: midY - ChokeHalfGap div 2),
+    MapPoint(x: result.width div 2, y: midY + ChokeHalfGap div 2),
   ]
   result.medKitCandidates = result.medKitSpawns
   result.rooms = result.defaultSmacRooms()
@@ -3378,6 +3456,8 @@ proc resolveSmacMapMetadata*(config: GameConfig): SmacMap =
       case name
       of ArenaName: arenaSmacMap()
       of ArenaLargeName: arenaLargeSmacMap()
+      of PlainsName: plainsSmacMap()
+      of MicroCorridorName: corridorSmacMap()
       of GenMapName: generateSmacMap(genSeed, config.mapGen, config.teams)
       of PoolMapName:
         if config.teams != 2:

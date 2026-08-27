@@ -1291,9 +1291,9 @@ body[data-embed] #board { top: 0; height: 100%; }
       <div class="lk-sprites" id="lk-sprites"></div>
     </div>
     <div class="lk-glow" aria-hidden="true"></div>
-    <div class="lk-cap" id="lk-cap" aria-hidden="true">Filling hoppers with fresh paint&hellip;</div>
+    <div class="lk-cap" id="lk-cap" aria-hidden="true">Charging plasma cells&hellip;</div>
     <div class="lk-bar" aria-hidden="true"><i></i></div>
-    <div class="lk-sub">Bot locker room &middot; Loading replay</div>
+    <div class="lk-sub">Squad ready room &middot; Loading replay</div>
   </div>
 
   <div id="chrome">
@@ -1627,14 +1627,14 @@ body[data-embed] #board { top: 0; height: 100%; }
 
     // rotating prep-talk line under the scene
     var lines = [
-      'Filling hoppers with fresh paint…',
-      'Pump check: one, two. One, two…',
+      'Charging plasma cells…',
+      'Rifle diagnostics: one, two. One, two…',
       'Polishing visors to a mirror shine…',
-      'Shaking the paint pods awake…',
-      'Squats. Even robots warm up…',
-      'Topping off the CO₂…',
-      'Chalking up the wheels…',
-      'Reviewing the game plan…'
+      'Calibrating targeting arrays…',
+      'Squats. Even mechs warm up…',
+      'Venting reactor heat…',
+      'Torquing the drive wheels…',
+      'Reviewing the battle plan…'
     ];
     var capEl = $('lk-cap'), capIx = 0;
     lockerCapTimer = setInterval(function () {
@@ -2016,7 +2016,7 @@ body[data-embed] #board { top: 0; height: 100%; }
           '<span class="team-name plate-name" id="name-' + slot + '">—</span>' +
           '<span class="lives-label smac-lbl">Dmg</span>' +
           '<span class="lives-num" id="lives-' + slot + '">0</span>' +
-          '<span class="smac-kills" id="kills-' + slot + '">0k</span>' +
+          '<span class="smac-kills" id="kills-' + slot + '">×0</span>' +
           '</div>' +
           '<div class="smac-hpwrap"><i class="smac-hpfill" id="hp-' + slot + '"></i></div>' +
           '</div>';
@@ -2057,7 +2057,7 @@ body[data-embed] #board { top: 0; height: 100%; }
         if (glyph) glyph.textContent = p.role === 'ranger' ? '\u2500\u25b8' : '\u2571';
         $('lives-' + p.s).textContent = p.dmg || 0;
         var kills = $('kills-' + p.s);
-        if (kills) kills.textContent = (p.k || 0) + 'k';
+        if (kills) kills.textContent = '\u00d7' + (p.k || 0);
         var bar = $('hp-' + p.s);
         if (bar) {
           var frac = Math.max(0, Math.min(1, (p.hp || 0) / Math.max(1, p.hpMax || 1)));
@@ -3417,7 +3417,7 @@ body[data-embed] #board { top: 0; height: 100%; }
         case 'wall_clock': return 'WALL-CLOCK STOP';
         case 'sim_fault':
         case 'host_error': return 'FAULT — NO RESULT';
-        default: return o.draw ? 'FULL TIME — DEAD EVEN' : 'FULL TIME ON THE HILL';
+        default: return o.draw ? 'FULL TIME — DEAD EVEN' : 'FULL TIME — BOTH SIDES STANDING';
       }
     }
     if (o.draw) return o.timeLimit ? 'TIME LIMIT — DRAW' : 'DRAW';
@@ -3646,12 +3646,19 @@ body[data-embed] #board { top: 0; height: 100%; }
       for (var pi = 0; pi < log.length; pi++) {
         pct.push(log[pi].dmgPct + '% dealt / ' + log[pi].lossPct + '% lost');
       }
+      // Between battles there is one frame window where battlesWon has
+      // ticked but the battle is not yet banked into the log (the server
+      // banks on the transition): never claim NO BATTLE PLAYED against a
+      // counted win, and never print the not-yet-banked score as 0.000.
+      if (!parts.length && m.won > 0) {
+        parts.push(m.won + ' BATTLE' + (m.won === 1 ? '' : 'S') + ' WON');
+      }
       head.className = 'headline ' + (m.won > 0 ? 'red' : 'draw');
       head.textContent = parts.length ? parts.join(' · ') : 'NO BATTLE PLAYED';
       how.textContent =
         (m.theirTotal - m.theirAlive) + ' OF ' + m.theirTotal + ' KILLED · ' +
-        m.won + ' BATTLE' + (m.won === 1 ? '' : 'S') + ' WON · SCORE ' +
-        ((m.score || 0) / 1000).toFixed(3) +
+        m.won + ' BATTLE' + (m.won === 1 ? '' : 'S') + ' WON' +
+        (log.length ? ' · SCORE ' + ((m.score || 0) / 1000).toFixed(3) : '') +
         (pct.length ? ' — ' + pct.join(' · ') : '') +
         (m.reason === 'deadline'
           ? ' — the engine hit its wall-clock budget and scored what was banked.'
@@ -4221,6 +4228,23 @@ body[data-embed] #board { top: 0; height: 100%; }
 #stage.tiny .plate .smac-kills { display: none; }
 #stage.tiny .armyrow .arow-notch { display: none; }
 #stage.tiny .armyrow .arow-cap { width: calc(24 * var(--u)); }
+
+/* --- team light: bind the HUD to the board's color language ------------ */
+/* The board speaks azure (our squad's plasma) vs crimson (the enemy army) —
+   see src/smac/sim_types.nim teamDisplayColor. The HUD reuses exactly those
+   two accents so a viewer learns the color language once. */
+:root { --ours: #57c7ff; --foe: #ff5252; }
+/* A failed load must own the curtain: stop the prep-talk + progress bar the
+   moment the shell reports data-replay-error, so an error and a loading
+   state can never show at once. */
+html[data-replay-error] #lockerroom .lk-cap,
+html[data-replay-error] #lockerroom .lk-bar { display: none; }
+.armyrow.ours .arow-fill { background: var(--ours); }
+.armyrow.theirs .arow-fill { background: var(--foe); }
+.plate .smac-hpfill { background: var(--ours); }
+.plate.down .smac-hpfill { background: var(--paper-dim); }
+.feed-row .smac-hot { color: var(--foe); }
+.beat-marker.loss { background: var(--foe); }
 </style>
 <script>
 (function () {
@@ -4365,6 +4389,12 @@ body[data-embed] #board { top: 0; height: 100%; }
   }
 
   // --- the clock caption -------------------------------------------------
+  // Scenario ids read as config keys; the broadcast captions them in the
+  // words a viewer would use ("default" is the ranked 2-rangers-3-blades mix).
+  var SCENARIO_CAPTION = {
+    'default': 'standard', 'outnumbered': 'outnumbered',
+    'swarm': 'swarm', 'corridor': 'corridor'
+  };
   function renderCaption(s) {
     var m = s.micro;
     var cap = $('clock-caption');
@@ -4373,7 +4403,8 @@ body[data-embed] #board { top: 0; height: 100%; }
     var turns = Math.max(1, Math.floor((s.mt || 1440) / turnTicks));
     var turn = Math.min(turns, Math.floor((s.t - (s.st || 0)) / turnTicks) + 1);
     cap.textContent =
-      'battle ' + m.battle + '/' + m.battles + ' · ' + m.scenario + ' · ' +
+      'battle ' + m.battle + '/' + m.battles + ' · ' +
+      (SCENARIO_CAPTION[m.scenario] || m.scenario) + ' · ' +
       m.ourAlive + ' v ' + m.theirAlive + ' · turn ' + turn + '/' + turns;
   }
 
@@ -4410,7 +4441,11 @@ body[data-embed] #board { top: 0; height: 100%; }
           CTX.esc(String(e.target)) + ' IS DOWN</span>');
         return true;
       case 'kill':
-        feedRow(CTX.esc(String(e.alias)) + ' destroyed');
+        // Two shapes reach here: the micro event (has `alias` — the fallen
+        // enemy) and the inherited killer/victim event the sim still emits
+        // for every death. Only the micro one is a feed row; the inherited
+        // shape is swallowed so it can never print "undefined destroyed".
+        if (e.alias) feedRow(CTX.esc(String(e.alias)) + ' destroyed');
         return true;
       case 'loss':
         smacBeat(s, e.t, 'loss', '',
@@ -4464,10 +4499,33 @@ body[data-embed] #board { top: 0; height: 100%; }
     }
   }
 
+  // The shared chrome captions the verdict by TEAM COLOR ("RED WINS");
+  // micro's sides are the squad and the scripted army. Chrome rewrites the
+  // chip whenever the verdict re-applies, so recaption via an observer that
+  // wins whatever the ordering.
+  var verdictRecaption = null;
+  function recaptionVerdict(el) {
+    var vt = el.textContent
+      .replace(/^RED WINS$/, 'SQUAD WINS')
+      .replace(/^BLUE WINS$/, 'ENEMY ARMY WINS');
+    if (el.textContent !== vt) el.textContent = vt;
+  }
+  function ensureVerdictRecaption() {
+    if (verdictRecaption) return;
+    var chip = $('win-chip');
+    if (!chip) return;
+    recaptionVerdict(chip);
+    verdictRecaption = new MutationObserver(function () {
+      recaptionVerdict(chip);
+    });
+    verdictRecaption.observe(chip, { childList: true, characterData: true, subtree: true });
+  }
+
   function smacFrame(s, ctx, jumped) {
     CTX = ctx;
     var m = s.micro;
     if (!m) return;
+    ensureVerdictRecaption();
     renderMomentumLabel();
     renderArmyBars(m);
     renderFocusRing(s);
@@ -4500,6 +4558,7 @@ body[data-embed] #board { top: 0; height: 100%; }
     }
   }
 
+  document.title = 'SMAC StarCraft Micro — Broadcast Replay';
   window.SmacChrome = {
     install: function (ctx) { CTX = ctx; },
     frame: smacFrame,

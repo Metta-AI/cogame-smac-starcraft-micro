@@ -84,7 +84,7 @@ SCALARS = {
     "minPlayers": {"type": "integer", "minimum": 5, "maximum": 5, "default": 5},
     "scenario": {"type": "string", "default": "default"},
     "loadout": {"type": "string", "default": "micro"},
-    "mapPath": {"type": "string", "default": "arena"},
+    "mapPath": {"type": "string", "default": "plains"},
     "fogOfWar": {"type": "boolean", "default": False},
     "fastMode": {"type": "boolean", "default": True},
     "showPlayerLabels": {"type": "boolean", "default": False},
@@ -177,7 +177,7 @@ RESULTS_SCHEMA = {
 }
 
 
-def game_config(scenario, roles, enemy_roles):
+def game_config(scenario, roles, enemy_roles, map_path):
     config = {
         "players": PLAYERS,
         "slots": SLOTS,
@@ -188,7 +188,7 @@ def game_config(scenario, roles, enemy_roles):
         "roles": roles,
         "enemyRoles": enemy_roles,
         "seed": 679961,
-        "mapPath": "arena",
+        "mapPath": map_path,
         "fogOfWar": False,
         "fastMode": True,
         "showPlayerLabels": False,
@@ -202,26 +202,28 @@ VARIANTS = [
      "Two rangers and three blades against a mirror army of the same five "
      "units, 480 hit points a side. The league default: the SMAC 2s3z shape, "
      "where focus fire, kiting and body-blocking are all live decisions at "
-     "once. Three 60-second battles; the squad's score is one number and every "
-     "seat gets it.",
-     ROLES, ROLES),
+     "once. Fought on the open plains: 475 px of flat deck and nothing to hide "
+     "behind. Three 60-second battles; the squad's score is one number and "
+     "every seat gets it.",
+     ROLES, ROLES, "plains"),
     ("outnumbered", "Micro — five against six",
      "Five rangers against six. Nobody can body-block, so the only way to win "
      "the trade is to kill faster than you are killed: one target at a time, "
-     "and back off while the weapon cools. Adapted from the SMAC 5m_vs_6m "
-     "shape.",
-     ["ranger"] * 5, ["ranger"] * 6),
+     "and back off while the weapon cools. Fought on the open plains. Adapted "
+     "from the SMAC 5m_vs_6m shape.",
+     ["ranger"] * 5, ["ranger"] * 6, "plains"),
     ("corridor", "Micro — the corridor",
      "Five blades against twenty fast, fragile swarm units. Twenty-five bodies "
-     "on the board: the squad has to hold a line rather than chase, because a "
-     "blade that steps out is surrounded. Adapted from the SMAC corridor shape.",
-     ["blade"] * 5, ["swarm"] * 20),
+     "on the board, and the field pinches to one 104 px doorway: the squad has "
+     "to hold the corridor rather than chase, because a blade that steps "
+     "through is surrounded. Adapted from the SMAC corridor shape.",
+     ["blade"] * 5, ["swarm"] * 20, "corridor"),
     ("heavy", "Micro — outgunned",
      "The default squad against seven: three enemy rangers and four enemy "
      "blades, 660 hit points against our 480. A victory here needs perfect "
-     "focus fire; a full-time draw with damage banked is a real result. "
-     "Adapted from the SMAC 3s5z_vs_3s6z shape.",
-     ROLES, ["ranger"] * 3 + ["blade"] * 4),
+     "focus fire; a full-time draw with damage banked is a real result. Fought "
+     "on the open plains. Adapted from the SMAC 3s5z_vs_3s6z shape.",
+     ROLES, ["ranger"] * 3 + ["blade"] * 4, "plains"),
 ]
 
 CERT_CONFIG = {
@@ -234,7 +236,7 @@ CERT_CONFIG = {
     "loadout": "micro",
     "scenario": "default",
     "seed": 679961,
-    "mapPath": "arena",
+    "mapPath": "plains",
     "fogOfWar": False,
     "maxTicks": 480,
     "maxGames": 3,
@@ -321,9 +323,9 @@ manifest = {
             "id": vid,
             "name": name,
             "description": description,
-            "game_config": game_config(vid, roles, enemy_roles),
+            "game_config": game_config(vid, roles, enemy_roles, map_path),
         }
-        for vid, name, description, roles, enemy_roles in VARIANTS
+        for vid, name, description, roles, enemy_roles, map_path in VARIANTS
     ],
     "certification": {
         "players": [{"player_id": "baseline"} for _ in range(5)],

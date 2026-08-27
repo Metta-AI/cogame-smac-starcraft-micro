@@ -5,11 +5,21 @@ field, and every shipped variant leaves it at the value printed below.
 
 ## The board
 
-The hand-tuned `arena` map: **1235 x 659** map pixels, fixed geometry, pinned
-into the replay's config as `mapSpec`. No procedural terrain. The obstacles are
-exactly the cover that makes line of sight matter, and the four spinning centre
-diamonds are live geometry that movement, bullets and vision all resolve
-against.
+Every scenario fights on a **1235 x 659** map-pixel board with fixed geometry,
+pinned into the replay's config as `mapSpec`. No procedural terrain. The map is
+per-scenario, in the shape of the original SMAC scenario maps:
+
+* **`plains`** (`default`, `outnumbered`, `heavy`) — the open battlefield the
+  SMAC line fights are played on: a flat field with no interior obstacles.
+  Nothing blocks line of sight; positioning, focus fire and kiting are the
+  whole game.
+* **`corridor`** (`corridor`) — the field pinches to one **104 px** doorway at
+  the board's centre: two wall slabs spanning x **500..735** leave a single
+  channel on the spawn axis. The swarm must stream through it; five blades that
+  hold the doorway kill it one body at a time.
+
+The legacy hand-tuned `arena` map (the cover field with the four spinning
+centre diamonds) remains selectable by config for replay compatibility.
 
 `TargetFps` = `ReplayFps` = **24**. One **battle** is `maxTicks` = **1440**
 ticks = 60 s. One **episode** is `maxGames` = **3** battles. The map, the seed

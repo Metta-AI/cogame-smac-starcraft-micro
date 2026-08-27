@@ -2193,17 +2193,27 @@ type
 
 
 # Team endzone display colors (shared by the map bake and the paint FX).
+# StarCraft-micro register (docs/plans/2026-08-27-starcraft-look-brief.md):
+# Red = OUR squad = friendly azure plasma; Blue = the enemy army = hostile
+# crimson; Green = the corridor swarm = toxic acid.
 const
-  RedEndzoneColor* = rgba(224, 82, 58, 255)    ## team vermillion (§4).
-  BlueEndzoneColor* = rgba(63, 124, 196, 255)  ## team cerulean (§4).
-  GreenEndzoneColor* = rgba(69, 168, 94, 255)  ## matches the viewer --green.
-  YellowEndzoneColor* = rgba(221, 197, 49, 255)  ## matches the viewer --yellow.
+  RedEndzoneColor* = rgba(87, 199, 255, 255)   ## our azure plasma.
+  BlueEndzoneColor* = rgba(255, 82, 82, 255)   ## enemy crimson.
+  GreenEndzoneColor* = rgba(148, 224, 62, 255) ## swarm acid green.
+  YellowEndzoneColor* = rgba(221, 197, 49, 255)  ## unused in micro; amber.
     ## Exported as THE team display colors. The 16-entry `Palette` a sprite's
-    ## `color: uint8` indexes is the retro engine palette, and its blue slot
-    ## (BlueTeamColor = 13) is a muted lavender (131,118,156) that reads nothing
-    ## like the vivid cerulean the soldier art (116,168,255) and the endzone
-    ## floor actually show. Any NEW team-colored art should tint from these four
-    ## so it matches what a viewer sees on the board.
+    ## `color: uint8` indexes is the retro engine palette, and its slots read
+    ## nothing like these display colors. Any team-colored art should tint
+    ## from these four so it matches what a viewer sees on the board.
+
+proc teamDisplayColor*(team: Team): ColorRGBA =
+  ## The team's broadcast display color (badges, bubbles, auras, endzones,
+  ## paint FX) — always these four, never the retro `Palette` slots.
+  case team
+  of Red: RedEndzoneColor
+  of Blue: BlueEndzoneColor
+  of Green: GreenEndzoneColor
+  of Yellow: YellowEndzoneColor
 
 # Pure aim-angle math (needed on both sides of the art/gameplay split).
 proc distSq*(ax, ay, bx, by: int): int =

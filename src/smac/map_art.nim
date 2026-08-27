@@ -249,19 +249,19 @@ proc blitCover(dst, spr: Image, cx, cy, size: int) =
 ## exception, same as the glass sheen). Light comes from the up-left, so the
 ## up-left parapet run catches a highlight and the down-right run falls into
 ## shadow — the Gungeon/Nuclear-Throne top-down convention (L98). The
-## buildings keep the cover's warm-tan family (REPLAY_DESIGN §3 warm-stone
-## cover) so they pop off the neutral-grey concrete floor, and the team
-## colors stay the only saturated channels.
+## structures are cool mid-steel armor blocks so they pop off the near-black
+## alloy deck (StarCraft-micro register, docs/plans/2026-08-27-starcraft-look
+## brief), and the team colors stay the only saturated channels.
 const
   WallBevel = 3                          ## px width of the parapet rim band.
-  RoofFace = rgba(110, 92, 72, 255)      ## flat warm roof (the old cover tan,
-                                         ## a step darker so the rim pops).
-  RoofSeam = rgba(97, 80, 62, 255)       ## diagonal membrane seam lines.
-  RoofLip = rgba(56, 45, 35, 255)        ## shadow line where parapet meets roof.
-  ParapetFace = rgba(152, 130, 104, 255) ## flat parapet top.
-  ParapetHi = rgba(192, 169, 139, 255)   ## up-left lit parapet (catches light).
-  ParapetLo = rgba(88, 72, 56, 255)      ## down-right shaded parapet.
-  StoneInk = rgba(32, 27, 22, 255)       ## warm near-black ground line (never #000).
+  RoofFace = rgba(64, 71, 82, 255)       ## flat cool armor top (a step darker
+                                         ## than the rim so the rim pops).
+  RoofSeam = rgba(55, 62, 73, 255)       ## diagonal armor seam lines.
+  RoofLip = rgba(28, 32, 40, 255)        ## shadow line where parapet meets roof.
+  ParapetFace = rgba(102, 112, 126, 255) ## flat parapet top.
+  ParapetHi = rgba(148, 160, 178, 255)   ## up-left lit parapet (catches light).
+  ParapetLo = rgba(50, 56, 66, 255)      ## down-right shaded parapet.
+  StoneInk = rgba(15, 18, 24, 255)       ## cool near-black ground line (never #000).
   RoofSeamPeriod = 16                    ## px between diagonal roof seams.
 
 proc floorDistDir(wall: seq[bool], w, h, x, y, dx, dy, cap: int): int =
@@ -331,8 +331,9 @@ const
   ## palette index 1 (light gray) and the
   ## sheen streaks index 2 (near-white), so windows stay legible after the
   ## player-view palette quantization — glass must READ as see-through cover.
-  GlassFace = rgba(198, 198, 196, 255)   ## flat pane; quantizes to palette 1.
-  GlassSheen = rgba(240, 236, 226, 255)  ## diagonal streaks; quantizes to 2.
+  GlassFace = rgba(168, 205, 216, 255)   ## flat pane, cool energy-glass tint;
+                                         ## quantizes to palette 1.
+  GlassSheen = rgba(222, 244, 250, 255)  ## diagonal streaks; quantizes to 2.
 
 proc windowGlassColorAt(
   wall: seq[bool], w, h, x, y, scale: int
@@ -437,19 +438,19 @@ proc rotatingDiamondPixels*(
 ## the narrow scoring column only, anchored by a crisp bright threshold line at
 ## the exact x a carrier must cross. Cosmetic over mapImage → hash-safe.
 const
-  EndzoneCrackGlow = 165         ## ember alpha on the darkest crack pixels (kept
+  EndzoneCrackGlow = 96          ## ember alpha on the darkest seam pixels (kept
                                  ## below the pedestal glow so the flag home
                                  ## stays the brightest thing in the endzone).
   EndzoneLineAlpha = 220         ## solid threshold line at the exact score-x.
   EndzoneLineW = 3               ## px width of that threshold line.
-  # The concrete floor texture (scripts/art/build_floor.py) is baked to a
-  # luminance CONTRACT with these gates: the polished surface — including its
-  # light panel-seam bevels — stays at lum 72..112 (at/above FaceLevel → NO
-  # glow); only the hairline crack bottoms dip to ~32..34 (at/below CrackLevel
-  # → full glow), with the crack tapers crossing the band and glowing partially.
-  EndzoneFaceLevel = 66          ## polished-surface floor luminance (glow = 0).
-  EndzoneCrackLevel = 34         ## joint/crack-bottom luminance (glow = full).
-  EndzoneGlowFloor = 0.82        ## min home-falloff so the far end still glows.
+  # The deck-plate floor texture (data/arena_floor.png) is baked to a
+  # luminance CONTRACT with these gates: the armor-panel faces sit at
+  # lum ~31..47 (at/above FaceLevel → NO glow); only the recessed panel-seam
+  # bottoms dip to ~22..30 (at/below CrackLevel → full glow), so the team
+  # ember reads as powered conduit light in the deck seams, not a flat tint.
+  EndzoneFaceLevel = 36          ## armor-panel-face floor luminance (glow = 0).
+  EndzoneCrackLevel = 24         ## panel-seam-bottom luminance (glow = full).
+  EndzoneGlowFloor = 0.6         ## min home-falloff so the far end still glows.
   # The four *EndzoneColor team display colors moved to sim_types (they are
   # shared with the paint FX in sim_state, and hosting them here dragged the
   # whole art bake into the hash module's import DAG).
@@ -468,14 +469,6 @@ proc emberThroughCracks(base, ember: ColorRGBA, strength: float): ColorRGBA =
   let a = strength * crack * crack * EndzoneCrackGlow.float
   overTint(base, rgba(ember.r, ember.g, ember.b, uint8(clamp(a, 0.0, 255.0))))
 
-proc teamEndzoneColor(team: Team): ColorRGBA =
-  ## Returns the floor-glow ember color for one team's endzone.
-  case team
-  of Red: RedEndzoneColor
-  of Blue: BlueEndzoneColor
-  of Green: GreenEndzoneColor
-  of Yellow: YellowEndzoneColor
-
 type EndzoneTint = object
   ## One team's precomputed endzone paint job: its capture-zone box, ember
   ## color, and which box edges are inner THRESHOLD edges (the map-border
@@ -490,7 +483,7 @@ proc endzoneTints(gameMap: SmacMap): seq[EndzoneTint] =
     let zone = gameMap.captureZone(team)
     result.add EndzoneTint(
       zone: zone,
-      color: teamEndzoneColor(team),
+      color: teamDisplayColor(team),
       boundLoX: zone.xLo > 0,
       boundHiX: zone.xHi < gameMap.width - 1,
       boundLoY: zone.yLo > 0,
