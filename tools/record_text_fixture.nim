@@ -32,9 +32,14 @@
 
 import
   std/[json, os, strutils, unicode],
+  bitworld/spriteprotocol,
   smac/[directives, global, replays, sim]
 
 const
+  GameDir = currentSourcePath().parentDir().parentDir()
+    ## Repo root, so `data/` resolves however the tool was invoked (the same
+    ## trick tools/toolutil.nim uses; not imported, to keep this file's module
+    ## cone to the four it actually needs).
   DefaultOut = "dist/text-fixture/text_fixture.replay"
   Turn = 60                 ## ticks between turns: shorter than ShoutTicks, so
                             ## every unit has a LIVE bubble at every tick past
@@ -216,7 +221,12 @@ proc record(outPath: string): SimServer =
   sim
 
 proc main() =
-  let outPath = if paramCount() >= 1: paramStr(1) else: DefaultOut
+  ## The output path is resolved BEFORE the chdir, so a relative argument means
+  ## what the caller meant; assets then resolve from the repo root like every
+  ## other tool in here.
+  let outPath = absolutePath(
+    if paramCount() >= 1: paramStr(1) else: DefaultOut)
+  setCurrentDir(GameDir)
   if outPath.parentDir.len > 0:
     createDir(outPath.parentDir)
   let sim = record(outPath)
