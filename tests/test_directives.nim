@@ -55,6 +55,32 @@ suite "directives":
     check other.orders[0].id == "RANGER-alpha"
     check other.orders[0].intent == intHold
 
+  test "a runaway cogs[].id is capped on a rune boundary, at 16":
+    ## MaxCogIdRunes is now applied where it means something: `cogs[].id` is
+    ## the one unbounded MODEL-authored string the matcher reads, and it reads
+    ## it with `endsWith` both ways. The cut is on a rune boundary, so a 4-byte
+    ## emoji at the cap cannot be split in half.
+    check MaxCogIdRunes == 16
+    check "RANGER-epsilon".runeLen <= MaxCogIdRunes
+    let runaway = parse(
+      "{\"cogs\":[{\"id\":\"RANGER-alpha" & "\u{1F600}".repeat(40) &
+      "\",\"intent\":\"kite\"}]}")
+    check runaway.orders.len == 1
+    check runaway.orders[0].id == "RANGER-alpha"
+    check runaway.orders[0].intent == intKite
+    # And 16 is not a cap that CUTS a real id: the longest alias this game
+    # issues is 14 runes, and it has to keep matching BY NAME — a shorter cap
+    # would fall through to positional assignment and hand each cog the other's
+    # order.
+    let pair = parseSquadDirective(
+      extractJsonObject(
+        "{\"cogs\":[{\"id\":\"RANGER-epsilon\",\"intent\":\"hold\"}," &
+        "{\"id\":\"BLADE-alpha\",\"intent\":\"kite\"}]}"),
+      @["BLADE-alpha", "RANGER-epsilon"], @[2, 4],
+      600, 330, MapWidth - 1, MapHeight - 1)
+    check pair.orders[0].intent == intKite
+    check pair.orders[1].intent == intHold
+
   test "zero cogs raises, which is what the retry exists for":
     expect DirectiveError:
       discard parse("""{"note":"nothing to say","cogs":[]}""")
