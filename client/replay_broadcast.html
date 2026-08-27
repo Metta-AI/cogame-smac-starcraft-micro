@@ -4487,19 +4487,33 @@ body[data-embed] #board { top: 0; height: 100%; }
     }
   }
 
+  // The shared chrome captions the verdict by TEAM COLOR ("RED WINS");
+  // micro's sides are the squad and the scripted army. Chrome rewrites the
+  // chip whenever the verdict re-applies, so recaption via an observer that
+  // wins whatever the ordering.
+  var verdictRecaption = null;
+  function recaptionVerdict(el) {
+    var vt = el.textContent
+      .replace(/^RED WINS$/, 'SQUAD WINS')
+      .replace(/^BLUE WINS$/, 'ENEMY ARMY WINS');
+    if (el.textContent !== vt) el.textContent = vt;
+  }
+  function ensureVerdictRecaption() {
+    if (verdictRecaption) return;
+    var chip = $('win-chip');
+    if (!chip) return;
+    recaptionVerdict(chip);
+    verdictRecaption = new MutationObserver(function () {
+      recaptionVerdict(chip);
+    });
+    verdictRecaption.observe(chip, { childList: true, characterData: true, subtree: true });
+  }
+
   function smacFrame(s, ctx, jumped) {
     CTX = ctx;
     var m = s.micro;
     if (!m) return;
-    // The shared chrome captions the verdict by TEAM COLOR ("RED WINS");
-    // micro's sides are the squad and the scripted army — recaption.
-    var chip = $('win-chip');
-    if (chip) {
-      var vt = chip.textContent
-        .replace(/^RED WINS$/, 'SQUAD WINS')
-        .replace(/^BLUE WINS$/, 'ENEMY ARMY WINS');
-      if (chip.textContent !== vt) chip.textContent = vt;
-    }
+    ensureVerdictRecaption();
     renderMomentumLabel();
     renderArmyBars(m);
     renderFocusRing(s);

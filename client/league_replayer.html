@@ -710,7 +710,6 @@
   }
   function renderScorebug(s){
     applyMicroTheater(s);
-    microVerdictText();
     var teams=activeTeams(s);
     ensureShellTeams(teams);
     var tr=s.teams||{};
@@ -867,6 +866,7 @@
     ingestBeats(s);
     recordMomentum(s);
     if (s.ph==='gameover' && s.over) setVerdict(s.over);
+    microVerdictText();   // after setVerdict/ingestBeats, so the recaption wins
 
     lastTick = s.t;
     hideStatus();
