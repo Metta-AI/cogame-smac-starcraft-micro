@@ -564,8 +564,14 @@ proc turn*(
           cause = "throttled"
         result.add(fallbackRecord(
           battle, turnIndex, seat, attempt + 1, cause, error.msg))
+        ## An INTERIM failure the retry may still rescue: it must not print
+        ## "falling back", which is reserved for the terminal degrade line at
+        ## the bottom of this proc and is the phrase phase 60 greps the game log
+        ## for. An episode whose retry landed had no degrade and must read that
+        ## way.
         echo "smac llm: seat ", seat, " attempt ", attempt + 1,
-          " failed, falling back if it fails again: ", error.msg
+          (if attempt == 0: " failed, will retry: "
+           else: " failed, no attempt left: "), error.msg
         stillOpen.add(seat)
     open = stillOpen
     inc attempt

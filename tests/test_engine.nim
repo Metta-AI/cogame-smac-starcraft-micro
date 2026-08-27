@@ -1,6 +1,6 @@
 ## The turn loop: one parallel batch for all five seats, the spacing floor,
 ## the budget guard and the never-unactuated guarantee.
-import std/[json, strutils, unittest]
+import std/[json, os, strutils, unittest]
 import smac_helpers
 
 suite "engine":
@@ -148,3 +148,17 @@ suite "engine":
     check later.source == dsLlm
     ## The model's own note survives a repaired turn either way.
     check later.note == "nothing to say"
+
+  test "only the terminal degrade line says \"falling back\"":
+    ## Phase 60 greps the hosted GAME log for "falling back", so the phrase must
+    ## mean a seat really did degrade to the scripted layer for a turn. An
+    ## interim message for an attempt the retry may still rescue must not print
+    ## it — a round whose retry landed had no degrade and must read that way.
+    var printed = 0
+    for line in readFile(GameDir / "src/smac/decide.nim").splitLines():
+      let code = line.strip()
+      if "falling back" notin code or code.startsWith("#"):
+        continue
+      inc printed
+      check "falling back to focusfire (" in code
+    check printed == 2
