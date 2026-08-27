@@ -2016,7 +2016,7 @@ body[data-embed] #board { top: 0; height: 100%; }
           '<span class="team-name plate-name" id="name-' + slot + '">—</span>' +
           '<span class="lives-label smac-lbl">Dmg</span>' +
           '<span class="lives-num" id="lives-' + slot + '">0</span>' +
-          '<span class="smac-kills" id="kills-' + slot + '">0k</span>' +
+          '<span class="smac-kills" id="kills-' + slot + '">×0</span>' +
           '</div>' +
           '<div class="smac-hpwrap"><i class="smac-hpfill" id="hp-' + slot + '"></i></div>' +
           '</div>';
@@ -2057,7 +2057,7 @@ body[data-embed] #board { top: 0; height: 100%; }
         if (glyph) glyph.textContent = p.role === 'ranger' ? '\u2500\u25b8' : '\u2571';
         $('lives-' + p.s).textContent = p.dmg || 0;
         var kills = $('kills-' + p.s);
-        if (kills) kills.textContent = (p.k || 0) + 'k';
+        if (kills) kills.textContent = '\u00d7' + (p.k || 0);
         var bar = $('hp-' + p.s);
         if (bar) {
           var frac = Math.max(0, Math.min(1, (p.hp || 0) / Math.max(1, p.hpMax || 1)));
@@ -4384,6 +4384,12 @@ body[data-embed] #board { top: 0; height: 100%; }
   }
 
   // --- the clock caption -------------------------------------------------
+  // Scenario ids read as config keys; the broadcast captions them in the
+  // words a viewer would use ("default" is the ranked 2-rangers-3-blades mix).
+  var SCENARIO_CAPTION = {
+    'default': 'standard', 'outnumbered': 'outnumbered',
+    'swarm': 'swarm', 'corridor': 'corridor'
+  };
   function renderCaption(s) {
     var m = s.micro;
     var cap = $('clock-caption');
@@ -4392,7 +4398,8 @@ body[data-embed] #board { top: 0; height: 100%; }
     var turns = Math.max(1, Math.floor((s.mt || 1440) / turnTicks));
     var turn = Math.min(turns, Math.floor((s.t - (s.st || 0)) / turnTicks) + 1);
     cap.textContent =
-      'battle ' + m.battle + '/' + m.battles + ' · ' + m.scenario + ' · ' +
+      'battle ' + m.battle + '/' + m.battles + ' · ' +
+      (SCENARIO_CAPTION[m.scenario] || m.scenario) + ' · ' +
       m.ourAlive + ' v ' + m.theirAlive + ' · turn ' + turn + '/' + turns;
   }
 

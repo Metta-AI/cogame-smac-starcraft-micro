@@ -2690,22 +2690,27 @@ proc buildHitSparkSprite(colorIndex, stage: int): seq[uint8] {.measure.} =
   result = newRgbaPixels(HitSplatSize, HitSplatSize)
   let
     base = teamPaintRgba(PlayerColors[colorIndex and 0x0f])
-    # Paint stays bright: lighten the team color a touch so it never muddies,
-    # and keep a wet-highlight color near white for the sheen.
-    paintR = uint8((base.r.int * 3 + 255) div 4)
-    paintG = uint8((base.g.int * 3 + 255) div 4)
-    paintB = uint8((base.b.int * 3 + 255) div 4)
-    sheenR = uint8((base.r.int + 255 * 3) div 4)
-    sheenG = uint8((base.g.int + 255 * 3) div 4)
-    sheenB = uint8((base.b.int + 255 * 3) div 4)
-    # Dark contour = a deep version of the SAME hue (not brown), so the edge
-    # reads as shadowed paint, keeping the team color unambiguous.
-    edgeR = uint8(base.r.int * 2 div 5)
-    edgeG = uint8(base.g.int * 2 div 5)
-    edgeB = uint8(base.b.int * 2 div 5)
+    # A plasma impact COOLS as it ages: stage 0 is a white-hot flash with a
+    # team-ember rim; the last stage is a charred scorch whose rim keeps only
+    # a whisper of ember. Live fire stays the brightest thing on the field;
+    # residue goes dark (StarCraft-look brief).
+    stageF = stage.float / float(SplatterStages - 1)
+    heat = 1.0 - stageF
+    # Core: white-hot -> near-black char (hue whisper keeps sides tellable).
+    coreR = uint8(clamp(float(base.r.int + 255 * 3) / 4 * heat +
+      float(24 + base.r.int div 8) * stageF, 0, 255))
+    coreG = uint8(clamp(float(base.g.int + 255 * 3) / 4 * heat +
+      float(22 + base.g.int div 8) * stageF, 0, 255))
+    coreB = uint8(clamp(float(base.b.int + 255 * 3) / 4 * heat +
+      float(26 + base.b.int div 8) * stageF, 0, 255))
+    # Rim: team ember, dimming with age but always the mark's brightest part
+    # once the flash has cooled.
+    emberR = uint8(clamp(float(base.r) * (0.55 + 0.45 * heat), 0, 255))
+    emberG = uint8(clamp(float(base.g) * (0.55 + 0.45 * heat), 0, 255))
+    emberB = uint8(clamp(float(base.b) * (0.55 + 0.45 * heat), 0, 255))
     c = float(HitSplatSize - 1) / 2
-    # Alpha-only fade: full at stage 0, thinning to a faint stain by the last.
-    fade = 1.0 - 0.62 * (stage.float / float(SplatterStages - 1))
+    # Alpha fade: the flash is loud, the scorch settles to a quiet mark.
+    fade = 1.0 - 0.55 * stageF
     coreR2 = HitSplatCoreR * HitSplatCoreR
   # Six flung droplets ring the core (fixed offsets → deterministic sprite).
   const droplets = [(-8, -3, 2.4), (7, -6, 2.0), (9, 4, 2.6),
@@ -2736,19 +2741,21 @@ proc buildHitSparkSprite(colorIndex, stage: int): seq[uint8] {.measure.} =
             break
       if not inShape:
         continue
-      # Wet sheen: a small bright offset lobe up-left inside the core.
+      # White-hot spot: a small offset lobe inside the core, only while the
+      # impact is still hot (it cools away with the flash).
       let
         sxr = dx + 2.0
         syr = dy + 2.0
-        sheen = d2 <= coreR2 and (sxr * sxr + syr * syr) <= 5.2 * 5.2 and
+        sheen = heat > 0.5 and d2 <= coreR2 and
+          (sxr * sxr + syr * syr) <= 5.2 * 5.2 and
           (int((noise shr 9) mod 5) > 0)
       var r, g, b: uint8
       if onEdge:
-        (r, g, b) = (edgeR, edgeG, edgeB)
+        (r, g, b) = (emberR, emberG, emberB)
       elif sheen:
-        (r, g, b) = (sheenR, sheenG, sheenB)
+        (r, g, b) = (255'u8, 255'u8, 255'u8)
       else:
-        (r, g, b) = (paintR, paintG, paintB)
+        (r, g, b) = (coreR, coreG, coreB)
       result.putRawRgbaPixel(
         y * HitSplatSize + x, r, g, b,
         uint8(clamp(255.0 * fade, 0.0, 255.0))
@@ -2775,13 +2782,13 @@ proc buildPaintStainSprite(
   result = newRgbaPixels(outSize, outSize)
   let
     base = teamPaintRgba(PlayerColors[colorIndex and 0x0f])
-    # Keep the hue saturated and let ALPHA do all the subtlety. The stain has to
-    # stay translucent enough that the floor's concrete — control joints, cracks,
-    # grain — reads straight through it, which is the whole difference between
-    # "paint soaked into terrain" and "a colored blob dropped on top of it".
-    paintR = uint8(min(255, base.r.int * 92 div 100))
-    paintG = uint8(min(255, base.g.int * 92 div 100))
-    paintB = uint8(min(255, base.b.int * 92 div 100))
+    # A dried mark is a SCORCH, not paint: mostly char with a whisper of the
+    # shooter's ember hue, translucent enough that the deck plating reads
+    # straight through it. Residue stays quiet so live plasma is the only
+    # bright thing on the field (StarCraft-look brief).
+    paintR = uint8(min(255, (base.r.int * 34 + 20 * 66) div 100))
+    paintG = uint8(min(255, (base.g.int * 34 + 18 * 66) div 100))
+    paintB = uint8(min(255, (base.b.int * 34 + 24 * 66) div 100))
     c = float(outSize - k) / 2
     fs = float(outSize)
     v = float(variant)
