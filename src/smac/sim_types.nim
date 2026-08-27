@@ -811,7 +811,14 @@ const
   MaxDirectiveRunes* = 900      ## whole serialized `directive` record cap.
   MaxPromptRunes* = 4000        ## PLAYER_PROMPT transport cap (truncate, never
                                 ## reject); never written to the replay.
-  MaxCogIdRunes* = 12           ## `cogs[].id` cap, in RUNES.
+  MaxCogIdRunes* = 16           ## `cogs[].id` cap, in RUNES. Applied to the
+                                ## MODEL-authored id in `directives.cogEntries`
+                                ## before it is matched against the commanded
+                                ## aliases: it is the one unbounded string in a
+                                ## reply the matcher reads. 16 clears the
+                                ## longest alias this game issues
+                                ## (`RANGER-epsilon`, 14 runes), so no
+                                ## legitimate id is cut into a mismatch.
   AimUnitScale* = 1024
     ## Fixed-point scale of the integer aim table below. The paint grid's cone
     ## test is the one piece of NEW hashed arithmetic in this fork, and Nim's
