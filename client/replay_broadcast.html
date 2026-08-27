@@ -641,6 +641,38 @@ html, body {
 .fpv-gear .carry { color: var(--amber); font-weight: 600; }
 .fpv-dead .fpv-hp, .fpv-dead .fpv-gear { opacity: 0.4; }
 
+/* Un-fogged tactical minimap inset: top-right corner, BOARD aspect. Compact and
+   see-through so it reads as an overlay on the raycast, not a lid over it. A
+   quiet hairline frames it as a genuine window. pointer-events:none so grabbing
+   it still drags the whole PiP.
+   The width/aspect-ratio here are PRE-STREAM DEFAULTS (the classic arena) —
+   syncFpvMapShape() overwrites both from the streamed map's real w/h, because a
+   four-team board is square and a fixed 1.874:1 inset squashes it.
+   INHERITED, restored: the markup (#fpv-map / #fpv-map-canvas) and the JS that
+   drives it are both still here, so deleting these two rules left the inset an
+   unpositioned block inside #fpv (r1 review N7a). #fpv itself is unchanged. */
+.fpv-map {
+  position: absolute;
+  top: calc(4 * var(--u));
+  right: calc(4 * var(--u));
+  width: 38%;
+  aspect-ratio: 1235 / 659;
+  background: rgba(8, 5, 3, 0.42);
+  box-shadow: 0 0 0 1px rgba(232, 163, 61, 0.28);
+  overflow: hidden;
+  z-index: 2;
+  opacity: 0.9;
+  pointer-events: none;
+}
+.fpv-map canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+}
+
 /* ---------- 4b. VIEW CONTROLS: REMOVED ----------
    The board is the FIXED 1235 x 659 arena and relayout() always fits it whole
    inside the frame, so per the design pin a fixed arena drops #viewpanel
