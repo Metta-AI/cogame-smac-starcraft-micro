@@ -99,10 +99,15 @@ suite "viewer":
     check "SmacChrome" in appended
     check "battle " in appended
 
-  test "the three 360 px rules are present":
+  test "the 360 px rules are present, labels included":
     check ".plate-name {" in appended
     check "flex: 1 1 auto;" in appended
     check "min-width: 3.2em;" in appended
+    # Item 11's second clause: the plate LABEL is hidden under 640 px, the way
+    # the starter hides `.lives-label`. The micro plate's `Dmg` span carries
+    # both class names, so both are pinned here.
+    check "#stage.tiny .plate .lives-label" in appended
+    check "#stage.tiny .plate .smac-lbl { display: none; }" in appended
     check "#stage.tiny .plate .smac-kills { display: none; }" in appended
     check "#stage.tiny .armyrow .arow-notch { display: none; }" in appended
 

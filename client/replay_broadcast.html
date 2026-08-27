@@ -4175,7 +4175,14 @@ body[data-embed] #board { top: 0; height: 100%; }
 
 /* --- 360 px legibility ------------------------------------------------- */
 /* relayout() already sets --hudscale = clamp(0.5, boardW/760, 1.6) and toggles
-   #stage.tiny at boardW <= 620; these three rules are this game's own. */
+   #stage.tiny at boardW <= 620; these rules are this game's own. The plate
+   LABEL goes with the kill numeral: the starter hides `.lives-label` under
+   .tiny for exactly this reason, and the micro plate's `Dmg` label carries
+   both that class and `.smac-lbl`, so under the embedded featured-match width
+   a plate keeps only glyph + name + damage + hp bar and the NAME gets the
+   room (acceptance item 11, r1 review B5). */
+#stage.tiny .plate .lives-label,
+#stage.tiny .plate .smac-lbl { display: none; }
 #stage.tiny .plate .smac-kills { display: none; }
 #stage.tiny .armyrow .arow-notch { display: none; }
 #stage.tiny .armyrow .arow-cap { width: calc(24 * var(--u)); }
