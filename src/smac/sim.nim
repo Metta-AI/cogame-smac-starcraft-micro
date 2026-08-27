@@ -1099,6 +1099,12 @@ proc absorbDamage*(
   let fromShield = min(sim.players[targetIndex].shieldHp, amount)
   sim.players[targetIndex].shieldHp -= fromShield
   sim.players[targetIndex].hp -= amount - fromShield
+  # MICRO: HIT POINTS FLOOR AT 0 (docs/RULES.md). The inherited engine leaves
+  # hp negative and clamps at every read site; here the sim guard asserts
+  # `hp in [0, maxHp]` every tick, and a floored ledger is also what makes the
+  # overkill clip below exact.
+  if sim.config.microMode():
+    sim.players[targetIndex].hp = max(0, sim.players[targetIndex].hp)
   # MICRO ledger: the scoreboard banks only the share of the hit that the
   # victim actually had left. Clipping the overkill here — the ONE subtraction
   # point — is what makes `dmgFrac == 1` mean exactly "the enemy army is dead"

@@ -786,8 +786,14 @@ const
   DefaultTurnBudgetMs* = 10_000 ## hard monotonic cap around one whole turn.
   DefaultAttempt1Ms* = 6000     ## first parallel batch deadline (6 s exactly).
   DefaultRetryMs* = 3000        ## single retry batch deadline (6 + 3 <= 10).
-  DefaultTurnSpacingMs* = 5000  ## wall-clock floor between batch STARTS; holds
-                                ## 2 seats under the sidecar's 30 req/min cap.
+  DefaultTurnSpacingMs* = 12_000
+                                ## wall-clock floor between batch STARTS. The
+                                ## Bedrock sidecar caps 30 requests/minute PER
+                                ## EPISODE and this game issues FIVE per turn,
+                                ## so 12.0 s pins the episode at 5 x 60 / 12 =
+                                ## 25 req/min. It is a floor, not a sleep on
+                                ## the critical path: the loop keeps stepping
+                                ## sim ticks while it waits.
   DefaultWallClockBudgetSeconds* = 690
                                 ## engine hard stop, 57.5% of the assumed 1200 s
                                 ## episodeTimeoutSeconds (the 60% pin).

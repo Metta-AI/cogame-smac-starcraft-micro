@@ -52,12 +52,12 @@ suite "viewer":
   test "the page is the starter's, with a game block APPENDED":
     check bannerAt > 0
     check inherited.len > appended.len
-    for id in ["#viewport", "#stage", "#board", "#lightpool", "#grain",
-               "#lockerroom", "#chrome", "#scorebug", "#bannerlane",
-               "#killfeed", "#fpv", "#povBadge", "#mmwarn", "#transport",
-               "#scrub", "#momentum", "#lulls", "#scrub-win", "#scrub-head",
-               "#endcard"]:
-      check id in inherited
+    for id in ["viewport", "stage", "board", "lightpool", "grain",
+               "lockerroom", "chrome", "scorebug", "bannerlane",
+               "killfeed", "fpv", "povBadge", "mmwarn", "transport",
+               "scrub", "momentum", "lulls", "scrub-win", "scrub-head",
+               "endcard"]:
+      check ("id=\"" & id & "\"") in inherited
     check "plates-l" in inherited
     check "plates-r" in inherited
     check "id=\"clock\"" in inherited

@@ -1726,11 +1726,11 @@ body[data-embed] #board { top: 0; height: 100%; }
     canvas: canvas,
     onText: function (txt) { onFrame(txt); },
     onStatus: function (st) { onStatus(st); },
-    onFirstFrame: function () { core.setViewportFit(); syncViewUi(); },
+    onFirstFrame: function () { core.setViewportFit(); },
     // The core owns the view, so it tells the controls where it ended up —
     // never the other way round. That keeps the slider honest when the zoom
     // moved for some other reason (a pinch, an arrow key, a refit, a new board).
-    onTransform: function (t) { syncViewUi(t); }
+    onTransform: function (t) { /* the zoom readout and the minimap are gone */ }
   };
   var core = replayAdapter
     ? replayAdapter.createCore(coreConfig)
@@ -4018,9 +4018,9 @@ body[data-embed] #board { top: 0; height: 100%; }
      minimap #minimap/#minimap-canvas — this board is the FIXED 1235 x 659
      arena and relayout() always fits it whole), the heart/flag scorebug fields
      (.flagicon, .carrier-tag) and the .ec-heart endcard glyphs, the hill chips
-     and the paint-coverage arc, the .beat-marker.steal/.return/.capture/
-     .hillflip/.hillhold CSS rules (their kinds are never emitted here), and
-     the perk/handicap badges.
+     and the paint-coverage arc, the beat CSS for the five kinds this game
+     never emits (the flag beats and the paint-mode beats), and the
+     perk/handicap badges.
 
      KEPT IN FULL: #viewport, #stage, #board, #lightpool, #grain, #lockerroom,
      #chrome, #scorebug with #plates-l/#plates-r/#clock, #bannerlane,

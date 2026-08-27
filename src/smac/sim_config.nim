@@ -1034,7 +1034,6 @@ proc update*(config: var GameConfig, jsonText: string) =
   node.readConfigInt("dmgWeightPermille", config.dmgWeightPermille)
   node.readConfigInt("survWeightPermille", config.survWeightPermille)
   node.readConfigInt("creditEpsilonPerMyriad", config.creditEpsilonPerMyriad)
-  config.applyMicroDefaults()
   node.readConfigRegimes(config)
   if node.hasKey("mapSpec"):
     if node["mapSpec"].kind != JObject:
@@ -1050,6 +1049,10 @@ proc update*(config: var GameConfig, jsonText: string) =
     config.mapSpec = mapSpecJson(mapMeta)
   if not node.hasKey("gunRange"):
     config.gunRange = mapMeta.gunRange
+  ## AFTER the map resolution, which owns gunRange: the micro loadout's gun IS
+  ## the ranger's weapon, so its range and cooldown come from the role table
+  ## and not from the map default.
+  config.applyMicroDefaults()
   node.readConfigSlots(config.slots)
   node.readConfigHandicaps(config)
   node.readConfigPerks(config)
