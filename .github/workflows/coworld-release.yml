@@ -371,6 +371,57 @@ jobs:
           uvx --from "$COWORLD_PKG" coworld secret list "$coworld_name"
           echo '{"ok": true}' > "$RR/secret.json"
 
+      - name: Confirm the Coworld is canonical
+        # The canonical flag flips when the platform's hosted CERTIFICATION
+        # finishes, which can land SECONDS after upload-coworld has already
+        # printed "Canonical: no" / "Hosted certification: certifying" and
+        # exited 0. Observed on 0.1.1 (release run 33060010957): all five
+        # hosted smoke episodes passed, the upload printed "Canonical: no",
+        # and the platform's own certification completed_at was 09:53:01 —
+        # `coworld status` then said "Canonical: yes". Re-read the platform's
+        # state for a bounded window instead of burning a release dispatch on
+        # that race. This runs AFTER upload-coworld and after the secret put,
+        # so the load-bearing step order is untouched.
+        run: |
+          set -euo pipefail
+          echo "Confirm the Coworld is canonical" > "$RR/current_step"
+          python3 - "$RR" "$COWORLD_PKG" <<'PY'
+          import json, os, re, subprocess, sys, time
+          rr, pkg = sys.argv[1], sys.argv[2]
+          path = os.path.join(rr, "upload.json")
+          if not os.path.exists(path):
+              print("no upload.json - nothing to re-read")
+              raise SystemExit(0)
+          upload = json.load(open(path))
+          cow_id = upload.get("cow_id")
+          if upload.get("canonical") == "yes" or not cow_id:
+              print(f"canonical={upload.get('canonical')} - nothing to re-read")
+              raise SystemExit(0)
+          deadline = time.monotonic() + 600
+          while True:
+              proc = subprocess.run(
+                  ["uvx", "--from", pkg, "coworld", "status", cow_id],
+                  capture_output=True, text=True)
+              text = proc.stdout + proc.stderr
+              canonical = re.search(r"^Canonical: (yes|no)$", text, re.M)
+              certification = re.search(r"^Hosted certification: (.+)$", text, re.M)
+              canonical_value = canonical.group(1) if canonical else None
+              print(f"coworld status: canonical={canonical_value} "
+                    f"certification={certification.group(1) if certification else None}")
+              if canonical_value == "yes":
+                  upload["canonical"] = "yes"
+                  upload["canonical_source"] = "coworld status after upload-coworld"
+                  if certification:
+                      upload["hosted_certification"] = certification.group(1)
+                  json.dump(upload, open(path, "w"), indent=2)
+                  print("the platform reports this Coworld canonical")
+                  break
+              if time.monotonic() >= deadline:
+                  print("::warning::still not canonical after 600 s of polling")
+                  break
+              time.sleep(20)
+          PY
+
       - name: Assemble release-result.json
         if: always()
         env:
