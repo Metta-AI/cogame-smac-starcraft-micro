@@ -1451,6 +1451,49 @@ proc jitterDirection(
   ## it is part of the hashed game, so replays re-roll identically). The
   ## same fuzzed direction drives target selection AND the tracer/stain, so
   ## where the paint lands is where the viewer sees it fly.
+  if sim.config.microMode():
+    ## MICRO: the SAME calibration, computed with INTEGERS.
+    ##
+    ## The inherited path rotates the aim by `gauss(0, sigma)` and takes
+    ## `sin`/`cos` of the result. Every one of those is libm, and wasm's libm
+    ## need not agree with glibc's in the last bit — which is a native <-> wasm
+    ## hash divergence the moment a shot lands on a boundary. The paint loadout
+    ## never noticed because it has no gun; this game is a hitscan game, and
+    ## the design makes the per-tick hash chain load-bearing.
+    ##
+    ## So the jitter is drawn as an integer angle in MILLI-BRADS and the
+    ## direction is read from the engine's own 1024-scaled unit-vector table,
+    ## linearly interpolated for sub-brad resolution. The distribution is
+    ## triangular (the sum of two uniform draws) with the same standard
+    ## deviation the Gaussian had, so a fully visible body at maximum range is
+    ## still hit about 80% of the time:
+    ##
+    ##   half window (milli-brads) = 1000 * 256 * (PlayerHalf + 8)
+    ##                               / (2*pi * gunRange)
+    ##   sigma  = half window / 1.2816      (Phi^-1(0.90))
+    ##   spread = sigma / 0.408             (a triangular sd is a / sqrt(6))
+    ##
+    ## Every intermediate fits in 32 bits, which `int` is under --cpu:wasm32.
+    let
+      range = max(1, sim.config.gunRange)
+      denom = max(1, (6283 * range) div 1000)
+      halfWindowMilli = max(1, (AimBradsTurn * (PlayerHalf + 8) * 1000) div denom)
+      sigmaMilli = max(1, halfWindowMilli * 1000 div 1282)
+      spread = max(1, sigmaMilli * 245 div 100)
+      jitterMilli =
+        (sim.rng.rand(2 * spread) - spread) + (sim.rng.rand(2 * spread) - spread)
+      turnMilli = AimBradsTurn * 1000
+    var fine = headingBrads * 1000 + jitterMilli
+    fine = ((fine mod turnMilli) + turnMilli) mod turnMilli
+    let
+      step = fine div 1000
+      frac = fine mod 1000
+      nextStep = (step + 1) mod AimBradsTurn
+      unitX = (AimUnitX[step] * (1000 - frac) + AimUnitX[nextStep] * frac) div 1000
+      unitY = (AimUnitY[step] * (1000 - frac) + AimUnitY[nextStep] * frac) div 1000
+    # 1024 is a power of two and the numerators are small integers, so both
+    # quotients are EXACT binary doubles on every target.
+    return (float(unitX) / 1024.0, float(unitY) / 1024.0)
   let
     (bx, by) = aimVector(headingBrads)
     jitter = gauss(sim.rng, 0.0, sim.aimJitterSigma(perks))
