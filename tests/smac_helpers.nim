@@ -82,22 +82,30 @@ proc initForTest*(config: GameConfig): SimServer =
   finally:
     setCurrentDir(previous)
 
-proc newMicroSim*(configJson = microConfigJson()): SimServer =
-  ## A STARTED micro battle: five seats seated, the enemy army built, both
-  ## lines spawned.
-  let config = microConfig(configJson)
-  result = initForTest(config)
-  result.gameEventLoggingEnabled = false
+proc seatMicroSquad*(sim: var SimServer) =
+  ## Seats the five policies and builds the scripted enemy army, exactly as the
+  ## server does before every battle. `resetToLobby` EMPTIES the roster between
+  ## battles, so a multi-battle episode calls this once per battle (the live
+  ## server re-registers its seats there and records the joins).
+  let config = sim.config
   for seat in 0 ..< config.numAgents:
     let name =
       if seat < config.slots.len and config.slots[seat].name.len > 0:
         config.slots[seat].name
       else:
         "policy" & $seat
-    discard result.addPlayer(name, seat, "t" & $seat)
-    result.seatNames[seat] = name
+    discard sim.addPlayer(name, seat, "t" & $seat)
+    sim.seatNames[seat] = name
   for order in config.numAgents ..< config.microUnitCount():
-    discard result.addPlayer(result.aliasOfCog(order), order, "", trusted = true)
+    discard sim.addPlayer(sim.aliasOfCog(order), order, "", trusted = true)
+
+proc newMicroSim*(configJson = microConfigJson()): SimServer =
+  ## A STARTED micro battle: five seats seated, the enemy army built, both
+  ## lines spawned.
+  let config = microConfig(configJson)
+  result = initForTest(config)
+  result.gameEventLoggingEnabled = false
+  result.seatMicroSquad()
   result.startGame()
 
 proc idle*(sim: SimServer): seq[InputState] =

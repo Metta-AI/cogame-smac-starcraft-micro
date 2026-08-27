@@ -2,9 +2,20 @@
 ## strictly as UTF-8 by the forensic tool.
 import std/[json, os, osproc, unicode, unittest]
 import smac_helpers
-import smac/replays
+import smac/[replay_runtime, replays]
 
 const Fixture = "tests/fixtures"
+
+proc writeSquadJoins(writer: var ReplayWriter, sim: SimServer) =
+  ## One join record per unit on the board, exactly as the server writes them
+  ## when the squad (re-)registers: our five carry their seat token, the
+  ## scripted army joins trusted with none.
+  for i in 0 ..< sim.players.len:
+    writer.writeJoin(
+      tickTime(sim.tickCount), i, sim.players[i].address, i,
+      (if i < sim.config.numAgents: "t" & $i else: ""))
+  while writer.lastMasks.len < sim.players.len:
+    writer.lastMasks.add(0)
 
 proc recordEpisode(path: string): SimServer =
   ## Plays a full scripted 5-seat, 3-battle episode and writes a COWLDSMC
@@ -17,15 +28,14 @@ proc recordEpisode(path: string): SimServer =
     prev = sim.idle()
     battles = 0
   defer: writer.closeReplayWriter()
-  for seat in 0 ..< sim.config.friendlyCount():
-    writer.writeJoin(tickTime(sim.tickCount), seat,
-                     sim.players[seat].address, seat, "t" & $seat)
-  for order in sim.config.friendlyCount() ..< sim.players.len:
-    writer.writeJoin(tickTime(sim.tickCount), order, sim.aliasOfCog(order),
-                     order, "")
-  while writer.lastMasks.len < sim.players.len:
-    writer.lastMasks.add(0)
+  writer.writeSquadJoins(sim)
   while battles < 3 and sim.tickCount < 3000:
+    if sim.phase == Lobby and sim.players.len == 0:
+      ## `resetToLobby` emptied the roster when the last battle ended. The
+      ## server re-registers the squad here and records the joins; playback
+      ## rebuilds the identical roster from them on the identical tick.
+      sim.seatMicroSquad()
+      writer.writeSquadJoins(sim)
     var now = sim.idle()
     if sim.phase == Playing:
       ctl.observeEnemies(sim)
@@ -75,13 +85,54 @@ suite "replay":
       let reparsed = parseReplayBytes(readFile(path))
       check reparsed.hashes.len == data.hashes.len
       # And the recorded config is enough to rebuild the identical sim, which
-      # is what the wasm viewer does frame by frame (the native <-> wasm hash
-      # gate in ci.yml is the executing half of this assertion).
+      # is what the wasm viewer does frame by frame (the next test is the
+      # executing half, natively; the wasm gate in ci.yml is the same
+      # assertion on the 32-bit target).
       var replayed = defaultGameConfig()
       replayed.update(data.configJson)
       check replayed.loadout == LoadoutMicro
       check replayed.enemyRoles.len == 5
       check replayed.seed == sim.config.seed
+      removeFile(path)
+    finally:
+      setCurrentDir(previous)
+
+  test "replaying the recording reproduces EVERY recorded hash, all 3 battles":
+    ## The executing half of acceptance item 2, natively: the recorded episode
+    ## is re-opened through the SHIPPED replay runtime — the identical
+    ## `initReplayRuntime` the wasm viewer calls — and stepped to the last
+    ## recorded tick from the config, the seed and the friendly masks alone
+    ## (the whole enemy army is re-derived). Consuming every recorded hash
+    ## with `hashValidationFailed` false IS "reproduces the recorded per-tick
+    ## state frame by frame".
+    ##
+    ## Multi-battle on purpose: a state transition applied on record but not on
+    ## playback shows up one tick after the FIRST battle boundary and nowhere
+    ## earlier (r1 review B1, which shipped green because no test replayed
+    ## anything).
+    let previous = getCurrentDir()
+    setCurrentDir(GameDir)
+    try:
+      createDir(Fixture)
+      let path = Fixture / "rederive.bitreplay"
+      let recorded = recordEpisode(path)
+      check recorded.battleLog.len == 3
+      let data = loadReplay(path)
+      var run = initReplayRuntime(
+        data, mismatchQuit = false, gameEventLoggingEnabled = false)
+      let maxTick = run.player.replayMaxTick()
+      check maxTick > 0
+      while run.player.playing and run.sim.tickCount < maxTick:
+        run.player.stepReplay(run.sim)
+      # `checkReplayHash` latches BOTH of these on the first disagreeing tick
+      # and stops checking, so they are the whole chain's verdict.
+      check run.player.hashMismatchTick == -1
+      check not run.player.hashValidationFailed
+      check run.player.hashIndex == data.hashes.len
+      check run.sim.tickCount == maxTick
+      # The re-derived sim really crossed all three battle boundaries.
+      check run.sim.battleIndex == 3
+      check run.sim.battlesWon == recorded.battlesWon
       removeFile(path)
     finally:
       setCurrentDir(previous)
