@@ -200,22 +200,24 @@ baseline for the whole episode, and all three battles play out.
 **`focusfire`** — the certification player, the per-turn LLM fallback, the
 driver of a no-show seat, and the default for a seat that registers with
 neither `PLAYER_PROMPT` nor `PLAYER_SCRIPTED`. Every governed unit derives the
-**same** kill order from state alone, so five independent seats converge on one
-target without communicating:
+**same** kill order from state alone, so the seats that can concentrate fire —
+the **rangers** — converge on one target without communicating, each from its
+own standoff post:
 
 1. Rank the living enemies by, in order: (a) inside 420 px of any living
    friendly unit before everything else; (b) current hp ascending; (c) integer
    squared distance to our squad centroid ascending; (d) enemy id ascending.
 2. A living **ranger** issues `focus` on the kill order — unless a living melee
    enemy is within `panicPx` = **150 px** of it, in which case it issues `kite`
-   with that enemy as `target_id`.
+   with that enemy as `target_id`. Its standoff post is one probe step per seat
+   around the target's standoff circle, so five rangers shooting one target
+   stand on five different posts instead of walking into the same point.
 3. A living **blade** issues `screen` when at least one friendly ranger is alive
-   and some melee enemy is within 260 px of that ranger; otherwise `focus` — on
-   the kill order, or on the living enemy nearest **itself** when that one is
-   less than **half** as far away (squared distances, integer: `4 * dNear <
-   dOrder`). A melee unit cannot walk across a battle to join a focus: it would
-   arrive dead without swinging once, so it hits what is already on it and
-   shares the kill order whenever the two are comparably close.
+   and some melee enemy is within 260 px of that ranger; otherwise `focus` on
+   the living enemy nearest **itself**. Focus fire is a ranged idea: a melee
+   unit cannot concentrate damage from where it stands, only walk, and five
+   blades walking at one enemy are a pile that swings at a single low-hp unit
+   while the rest of the army chews on them.
 4. With no living enemy: everyone `regroup`.
 
 **`charge`** — the second filler, weaker BY CONSTRUCTION and different in
