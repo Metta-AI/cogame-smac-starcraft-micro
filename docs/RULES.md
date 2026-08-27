@@ -213,11 +213,13 @@ own standoff post:
    around the target's standoff circle, so five rangers shooting one target
    stand on five different posts instead of walking into the same point.
 3. A living **blade** issues `screen` when at least one friendly ranger is alive
-   and some melee enemy is within 260 px of that ranger; otherwise `focus` on
-   the living enemy nearest **itself**. Focus fire is a ranged idea: a melee
-   unit cannot concentrate damage from where it stands, only walk, and five
-   blades walking at one enemy are a pile that swings at a single low-hp unit
-   while the rest of the army chews on them.
+   and some melee enemy is within 260 px of that ranger; otherwise `focus` — on
+   the **kill order** while our squad is not outnumbered (`enemyRoles` no longer
+   than `roles`), and on the living enemy nearest **itself** when it is. A melee
+   unit cannot concentrate damage from where it stands, only walk: against a few
+   tough enemies, arriving together and killing the focused one is worth it;
+   against a bigger, thinner army, three arcs into one dying body is wasted
+   damage while everything the pile is not facing keeps swinging.
 4. With no living enemy: everyone `regroup`.
 
 **`charge`** — the second filler, weaker BY CONSTRUCTION and different in

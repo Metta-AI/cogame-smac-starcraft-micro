@@ -129,9 +129,10 @@ proc scriptedDirective*(
   ## unless a melee enemy is inside `panicPx`, in which case it `kite`s that
   ## enemy — it is worth more alive at 300 px than dead at 50. A blade
   ## `screen`s while a friendly ranger is alive and a melee enemy is closing on
-  ## it; otherwise it `focus`es the enemy nearest ITSELF, because a melee unit
-  ## cannot concentrate fire from where it stands — it can only walk, and five
-  ## blades walking at one enemy are a pile, not a focus.
+  ## it; otherwise it `focus`es the shared kill order while the squad is not
+  ## outnumbered, and the enemy nearest ITSELF when it is — a melee unit cannot
+  ## concentrate fire from where it stands, it can only walk, and five blades
+  ## walking at one unit of a bigger army are a pile, not a focus.
   ##
   ## `charge` — weaker BY CONSTRUCTION and different in SHAPE, so the ladder
   ## gets a spread rather than two versions of one bot: unit k `attack_move`s at
@@ -215,21 +216,30 @@ proc scriptedDirective*(
         order.targetY = sim.players[threat].y + CollisionH div 2
         order.say = "kite"
     else:
-      ## MELEE, and this is where focus fire stops being a RANGED idea. A blade
-      ## cannot trade at range: it walks to its target, and five blades sent at
-      ## ONE enemy converge into a pile that swings at a single low-hp unit
-      ## while the rest of the army chews on them. It engages the enemy nearest
-      ## ITSELF instead — hit what you can reach — and the squad's shared kill
-      ## order is left to the rangers, who can actually concentrate fire from
-      ## where they stand. MEASURED at the pinned seed: five blades chasing one
-      ## kill order through a twenty-unit swarm scored 0.327, and 0.925 with the
-      ## half-distance version of this rule, against `charge`'s 0.942.
-      let near = sim.livingEnemyNearest(px, py)
-      if near >= 0:
-        order.targetId = sim.config.enemyIdOf(near)
-        order.targetX = sim.players[near].x + CollisionW div 2
-        order.targetY = sim.players[near].y + CollisionH div 2
-        order.say = sim.cogAlias(near)
+      ## MELEE, and the one place focus fire has to know the shape of the
+      ## fight. A blade cannot concentrate damage from where it stands — it can
+      ## only walk — so five of them sent at ONE enemy arrive as a pile.
+      ##
+      ## While our squad is NOT outnumbered it still joins the shared kill
+      ## order: the enemies are few and tough, killing the focused one removes
+      ## real damage, and overkill is cheap. Outnumbered, it hits the enemy
+      ## nearest ITSELF: against a bigger army the units are many and thin,
+      ## three arcs into one dying body is wasted damage, and everything the
+      ## pile is not facing keeps swinging. MEASURED, focus vs charge at the
+      ## pinned seed (tests/test_control.nim echoes the table every run):
+      ##
+      ##   5v5  2r3b vs 2r3b     share: 934 > 932   nearest: 922 < 932
+      ##   5v20 blades vs swarm  share: 925 < 942   nearest: 944 > 942
+      ##
+      ## The gate is the ARMY SIZES, not the live alive counts, so one early
+      ## loss cannot flip a squad's whole plan mid-battle.
+      if sim.config.enemyCount() > sim.config.friendlyCount():
+        let near = sim.livingEnemyNearest(px, py)
+        if near >= 0:
+          order.targetId = sim.config.enemyIdOf(near)
+          order.targetX = sim.players[near].x + CollisionW div 2
+          order.targetY = sim.players[near].y + CollisionH div 2
+          order.say = sim.cogAlias(near)
       let ranger = weakestRanger(sim)
       if ranger >= 0:
         let threat = nearestMeleeEnemy(sim, ranger)
