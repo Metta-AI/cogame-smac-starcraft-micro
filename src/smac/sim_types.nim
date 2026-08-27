@@ -2193,11 +2193,14 @@ type
 
 
 # Team endzone display colors (shared by the map bake and the paint FX).
+# StarCraft-micro register (docs/plans/2026-08-27-starcraft-look-brief.md):
+# Red = OUR squad = friendly azure plasma; Blue = the enemy army = hostile
+# crimson; Green = the corridor swarm = toxic acid.
 const
-  RedEndzoneColor* = rgba(224, 82, 58, 255)    ## team vermillion (§4).
-  BlueEndzoneColor* = rgba(63, 124, 196, 255)  ## team cerulean (§4).
-  GreenEndzoneColor* = rgba(69, 168, 94, 255)  ## matches the viewer --green.
-  YellowEndzoneColor* = rgba(221, 197, 49, 255)  ## matches the viewer --yellow.
+  RedEndzoneColor* = rgba(87, 199, 255, 255)   ## our azure plasma.
+  BlueEndzoneColor* = rgba(255, 82, 82, 255)   ## enemy crimson.
+  GreenEndzoneColor* = rgba(148, 224, 62, 255) ## swarm acid green.
+  YellowEndzoneColor* = rgba(221, 197, 49, 255)  ## unused in micro; amber.
     ## Exported as THE team display colors. The 16-entry `Palette` a sprite's
     ## `color: uint8` indexes is the retro engine palette, and its blue slot
     ## (BlueTeamColor = 13) is a muted lavender (131,118,156) that reads nothing
