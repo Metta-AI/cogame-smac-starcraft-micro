@@ -99,6 +99,16 @@ suite "viewer":
     check "SmacChrome" in appended
     check "battle " in appended
 
+  test "the army bars are a scorebug ROW, never an overlay on the plates":
+    ## B6: absolutely positioned inside #chrome they were drawn across the seat
+    ## plates. As #scorebug's own full-width grid row the band measures them, so
+    ## relayout() reserves the height and nothing overlaps.
+    check "grid-column: 1 / -1;" in appended
+    check "$('scorebug') || $('chrome')" in appended
+    let bars = appended[appended.find("#armybars {") .. ^1]
+    check "position: absolute" notin bars[0 ..< bars.find("}")]
+    check "--topband" notin bars[0 ..< bars.find("}")]
+
   test "the 360 px rules are present, labels included":
     check ".plate-name {" in appended
     check "flex: 1 1 auto;" in appended

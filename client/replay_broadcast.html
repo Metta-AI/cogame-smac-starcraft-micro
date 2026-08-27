@@ -4086,17 +4086,20 @@ body[data-embed] #board { top: 0; height: 100%; }
 .plate.down .smac-hpfill { background: var(--paper-dim); }
 
 /* --- the two army-strength bars: the bars ARE the score ---------------- */
-/* A full-width double strip immediately under the scorebug, inside the TOP
-   band — never in the transport band. */
+/* A full-width double strip immediately under the scorebug's plates and INSIDE
+   the top band — so it is the scorebug's own second row rather than an overlay
+   on top of it. It used to be absolutely positioned in #chrome at
+   `top: --topband - 14u`, i.e. 14 u above the BOTTOM of a three-plate-tall
+   band, which put both rows straight across the plate columns: CI's own
+   viewer-smoke.png showed the OURS bar struck through "Unit B" and the THEIRS
+   numerals printed over "Unit D DMG 210" (r1 review B6). As a grid row the
+   band MEASURES it — relayout() reads scorebug.offsetHeight into --topband —
+   so nothing overlaps at any width and nothing sits over play. */
 #armybars {
-  position: absolute;
-  left: calc(6 * var(--u));
-  right: calc(6 * var(--u));
-  top: calc(var(--topband, 0px) - (14 * var(--u)));
+  grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
   gap: calc(2 * var(--u));
-  z-index: 6;
   pointer-events: none;
   font-family: var(--finefont);
   font-size: calc(7 * var(--u));
@@ -4251,7 +4254,12 @@ body[data-embed] #board { top: 0; height: 100%; }
   // --- the two army bars -------------------------------------------------
   function ensureArmyBars() {
     if ($('armybars')) return;
-    var chrome = $('chrome') || document.body;
+    // Into #scorebug, as its own full-width grid row: the band's measured
+    // height then includes the bars and relayout() reserves the lot, so the
+    // strip can never be drawn over the plates or over the board (B6).
+    // ensureScorebug() only ever clears #plates-l / #plates-r, so this row
+    // survives every plate rebuild.
+    var chrome = $('scorebug') || $('chrome') || document.body;
     var wrap = document.createElement('div');
     wrap.id = 'armybars';
     wrap.innerHTML =
