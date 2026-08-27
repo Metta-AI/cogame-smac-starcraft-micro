@@ -4221,6 +4221,18 @@ body[data-embed] #board { top: 0; height: 100%; }
 #stage.tiny .plate .smac-kills { display: none; }
 #stage.tiny .armyrow .arow-notch { display: none; }
 #stage.tiny .armyrow .arow-cap { width: calc(24 * var(--u)); }
+
+/* --- team light: bind the HUD to the board's color language ------------ */
+/* The board speaks azure (our squad's plasma) vs crimson (the enemy army) —
+   see src/smac/sim_types.nim teamDisplayColor. The HUD reuses exactly those
+   two accents so a viewer learns the color language once. */
+:root { --ours: #57c7ff; --foe: #ff5252; }
+.armyrow.ours .arow-fill { background: var(--ours); }
+.armyrow.theirs .arow-fill { background: var(--foe); }
+.plate .smac-hpfill { background: var(--ours); }
+.plate.down .smac-hpfill { background: var(--paper-dim); }
+.feed-row .smac-hot { color: var(--foe); }
+.beat-marker.loss { background: var(--foe); }
 </style>
 <script>
 (function () {
@@ -4501,7 +4513,10 @@ body[data-embed] #board { top: 0; height: 100%; }
   }
 
   window.SmacChrome = {
-    install: function (ctx) { CTX = ctx; },
+    install: function (ctx) {
+      CTX = ctx;
+      document.title = 'SMAC StarCraft Micro — Broadcast Replay';
+    },
     frame: smacFrame,
     event: smacEvent
   };
