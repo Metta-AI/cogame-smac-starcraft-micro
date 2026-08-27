@@ -40,6 +40,17 @@ type
     mismatchQuit*: bool
     hashValidationFailed*: bool
     hashMismatchTick*: int
+    scanMismatchTick*: int
+      ## The tick the whole-match PRECOMPUTE WALK found a hash divergence at,
+      ## or -1. The walk crosses every recorded tick within a couple of
+      ## presentation frames while the display player is still near the start,
+      ## so it is normally the first — and, for a divergence past the display's
+      ## reach, the only — half of the runtime that sees one. Unlike
+      ## `hashMismatchTick` it is NOT restored from a keyframe: the integrity
+      ## signal a host reads (`replayMismatchTick`) must not be erased by a
+      ## seek. Before r1 review B3 the walk's detection lived only on its
+      ## private builder, so `smac_mismatch_tick()` returned -1 while the very
+      ## same process echoed the mismatch into a green CI log.
     keyframes*: seq[ReplayKeyframe]
     startTick*: int
       ## First tick the match is actually being PLAYED (the Lobby "WAITING FOR
@@ -252,7 +263,25 @@ proc initReplayPlayer*(data: ReplayData): ReplayPlayer =
   result.speedIndex = 0
   result.skipLulls = true
   result.hashMismatchTick = -1
+  result.scanMismatchTick = -1
   result.pendingSeekTick = -1
+
+proc replayMismatchTick*(replay: ReplayPlayer): int =
+  ## THE integrity signal every host reads: the earliest tick at which either
+  ## the display player or the precompute walk found the re-derived
+  ## `gameHash` disagreeing with the recording, or -1 when the whole walked
+  ## chain matched. Sticky across seeks.
+  ##
+  ## Both halves are needed. The display player only ever checks the ticks it
+  ## is asked to play, so a divergence past its current position is invisible
+  ## to it; the walk checks every recorded tick but does so on a private
+  ## builder. Reading one of them is how a gate ends up unable to fail.
+  if replay.hashMismatchTick >= 0 and replay.scanMismatchTick >= 0:
+    min(replay.hashMismatchTick, replay.scanMismatchTick)
+  elif replay.hashMismatchTick >= 0:
+    replay.hashMismatchTick
+  else:
+    replay.scanMismatchTick
 
 proc replaySpeed*(replay: ReplayPlayer): int =
   ## Returns the current integer replay speed.
@@ -663,6 +692,13 @@ proc advanceReplayScan*(replay: var ReplayPlayer, maxTicks: int) =
         error.msg
       scan.builder.playing = false
       break
+    if scan.builder.hashMismatchTick >= 0 and replay.scanMismatchTick < 0:
+      ## The walk found a divergence. Publish it on the PLAYER: the builder is
+      ## private to the scan and is dropped when the walk finishes, so without
+      ## this the only trace of a broken hash chain is an `echo` — which is
+      ## exactly how the native-to-wasm gate passed while printing
+      ## "Replay hash mismatch at tick 319" (r1 review B3).
+      replay.scanMismatchTick = scan.builder.hashMismatchTick
     if replay.startTick < 0 and scan.sim.phase == Playing:
       replay.startTick = scan.sim.gameStartTick
     # Record the per-team hill-tick change-points across the full episode so
