@@ -4491,6 +4491,15 @@ body[data-embed] #board { top: 0; height: 100%; }
     CTX = ctx;
     var m = s.micro;
     if (!m) return;
+    // The shared chrome captions the verdict by TEAM COLOR ("RED WINS");
+    // micro's sides are the squad and the scripted army — recaption.
+    var chip = $('win-chip');
+    if (chip) {
+      var vt = chip.textContent
+        .replace(/^RED WINS$/, 'SQUAD WINS')
+        .replace(/^BLUE WINS$/, 'ENEMY ARMY WINS');
+      if (chip.textContent !== vt) chip.textContent = vt;
+    }
     renderMomentumLabel();
     renderArmyBars(m);
     renderFocusRing(s);
