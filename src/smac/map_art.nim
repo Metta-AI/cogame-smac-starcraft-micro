@@ -469,14 +469,6 @@ proc emberThroughCracks(base, ember: ColorRGBA, strength: float): ColorRGBA =
   let a = strength * crack * crack * EndzoneCrackGlow.float
   overTint(base, rgba(ember.r, ember.g, ember.b, uint8(clamp(a, 0.0, 255.0))))
 
-proc teamEndzoneColor(team: Team): ColorRGBA =
-  ## Returns the floor-glow ember color for one team's endzone.
-  case team
-  of Red: RedEndzoneColor
-  of Blue: BlueEndzoneColor
-  of Green: GreenEndzoneColor
-  of Yellow: YellowEndzoneColor
-
 type EndzoneTint = object
   ## One team's precomputed endzone paint job: its capture-zone box, ember
   ## color, and which box edges are inner THRESHOLD edges (the map-border
@@ -491,7 +483,7 @@ proc endzoneTints(gameMap: SmacMap): seq[EndzoneTint] =
     let zone = gameMap.captureZone(team)
     result.add EndzoneTint(
       zone: zone,
-      color: teamEndzoneColor(team),
+      color: teamDisplayColor(team),
       boundLoX: zone.xLo > 0,
       boundHiX: zone.xHi < gameMap.width - 1,
       boundLoY: zone.yLo > 0,

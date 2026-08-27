@@ -585,15 +585,21 @@ proc rigHeldWeaponPixels(
         float32(gripPx * renderScale), float32(GunRightPx * renderScale))) *
       scale(vec2(float32(ws), float32(ws))) *
       translate(vec2(0'f32, float32(-master.height) / 2))
-  # 1) lay the weapon on a transparent canvas, 2) build a warm-amber backlight
+  # 1) lay the weapon on a transparent canvas, 2) build a team-plasma backlight
   # from its silhouette (spread + blur), 3) draw glow THEN weapon.
   var weaponLayer = newImage(outCanvas, outCanvas)
   weaponLayer.draw(master, mat)
+  let glowBase =
+    case team
+    of Red: RedEndzoneColor      # our azure plasma
+    of Blue: BlueEndzoneColor    # enemy crimson
+    of Green: GreenEndzoneColor  # swarm acid
+    of Yellow: YellowEndzoneColor
   let glow = weaponLayer.shadow(
     offset = vec2(0, 0),
     spread = float32(GunGlowSpread * float(renderScale)),
     blur = float32(GunGlowRadius * float(renderScale)),
-    color = rgba(255, 214, 138, GunGlowAlpha).color)  # faint warm rim light
+    color = rgba(glowBase.r, glowBase.g, glowBase.b, GunGlowAlpha).color)
   var canvas = newImage(outCanvas, outCanvas)
   canvas.draw(glow)                      # subtle warm edge behind the weapon
   canvas.draw(weaponLayer)

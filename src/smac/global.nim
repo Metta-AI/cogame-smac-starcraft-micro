@@ -2022,7 +2022,7 @@ proc buildIdentityBadgeSprite(
   ## floating upright over a body that rotated out from under it.
   let
     size = IdentityBadgeSize * scale
-    base = Palette[teamColor(team) and 0x0f]
+    base = teamDisplayColor(team)
     c = float(size - 1) / 2
   result = newRgbaPixels(size, size)
   for y in 0 ..< size:
@@ -2654,8 +2654,7 @@ proc buildSplatterSprite(colorIndex, stage: int): seq[uint8] {.measure.} =
   ## color at stage 0 that grows sparser and darker toward the last stage.
   result = newRgbaPixels(SplatterSize, SplatterSize)
   let
-    color = PlayerColors[colorIndex and 0x0f]
-    shade = ShadowMap[color and 0x0f]
+    trueColor = teamPaintRgba(PlayerColors[colorIndex and 0x0f])
     half = SplatterSize div 2
   for y in 0 ..< SplatterSize:
     for x in 0 ..< SplatterSize:
@@ -2669,9 +2668,14 @@ proc buildSplatterSprite(colorIndex, stage: int): seq[uint8] {.measure.} =
       noise = (noise xor (noise shr 13)) * 1274126177'u32
       let density = 120 - stage * 25 - d2 * 2
       if int((noise shr 16) mod 100) < density:
-        result.putRgbaPixel(
+        # True team display color; late stages darken toward its shadow.
+        let dim = if stage >= SplatterStages div 2: 2 else: 5
+        result.putRawRgbaPixel(
           y * SplatterSize + x,
-          if stage >= SplatterStages div 2: shade else: color
+          uint8(trueColor.r.int * dim div 5),
+          uint8(trueColor.g.int * dim div 5),
+          uint8(trueColor.b.int * dim div 5),
+          255
         )
 
 proc buildHitSparkSprite(colorIndex, stage: int): seq[uint8] {.measure.} =
@@ -3933,7 +3937,7 @@ proc buildSmoothShoutBubble(
     logicalH = max(1, (outH + native - 1) div native)
     canvasW = logicalW * native
     canvasH = logicalH * native
-    edge = Palette[teamColor(team) and 0x0f]
+    edge = teamDisplayColor(team)
     edgeColor = color(
       float32(edge.r) / 255, float32(edge.g) / 255, float32(edge.b) / 255, 1)
     paperColor = color(1, 241 / 255, 232 / 255, 240 / 255)
@@ -4035,7 +4039,7 @@ proc buildShoutBubble*(
     pillH = font.height + 2 * ShoutPadY
     width = pillW
     height = pillH + ShoutTailH
-    edge = Palette[teamColor(team) and 0x0f]  # team-colored outline
+    edge = teamDisplayColor(team)  # team-colored outline
     tailCx = pillW div 2                       # tail centered under the pill
   result.width = width
   result.height = height
@@ -4427,7 +4431,7 @@ proc buildFlagAuraSprite(team: Team): seq[uint8] {.measure.} =
   let outSize = FlagAuraSize * boardScale
   result = newRgbaPixels(outSize, outSize)
   let
-    base = Palette[teamColor(team) and 0x0f]
+    base = teamDisplayColor(team)
     c = float(outSize - boardScale) / 2
   for y in 0 ..< outSize:
     for x in 0 ..< outSize:
