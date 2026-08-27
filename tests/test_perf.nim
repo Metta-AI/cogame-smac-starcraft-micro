@@ -34,7 +34,7 @@ suite "perf":
       if before != GameOver and sim.phase == GameOver:
         inc battles
         sim.archiveBattle()
-        sim.gameIndex = battles
+        sim.advanceBattle()
         sim.microSpawnBattle()
         sim.phase = Playing
         sim.gameStartTick = sim.tickCount
