@@ -43,9 +43,13 @@ suite "endings":
 
   test "the clock running out with both sides standing is full_time":
     var sim = newMicroSim(microConfigJson(maxTicks = 48))
-    sim.stepIdle(60)
+    # Exactly the ceiling: the battle ends ON this tick, before the game-over
+    # hold expires and the server resets to the lobby for the next one.
+    sim.stepIdle(48)
     check sim.phase == GameOver
     check sim.endRule == EndRuleFullTime
+    check sim.ourAlive > 0
+    check sim.theirAlive > 0
 
   test "battleLog records exactly one entry per battle played":
     var sim = newMicroSim()

@@ -439,8 +439,8 @@ proc teamPoliciesJson(sim: SimServer, team: Team): JsonNode =
     # policy identity of the seat that commands them lives in seatNames and
     # is what the scorebug headlines.
     let pol =
-      if sim.config.numAgents > 0 and p.seat <= sim.seatNames.high and
-          sim.seatNames[p.seat].len > 0:
+      if sim.config.numAgents > 0 and p.seat >= 0 and
+          p.seat <= sim.seatNames.high and sim.seatNames[p.seat].len > 0:
         policyName(sim.seatNames[p.seat])
       else:
         policyName(p.address)
@@ -507,8 +507,8 @@ proc rosterJson(sim: SimServer): JsonNode =
   result = newJArray()
   for i, p in sim.players:
     let spectatorName =
-      if sim.config.numAgents > 0 and p.seat <= sim.seatNames.high and
-          sim.seatNames[p.seat].len > 0:
+      if sim.config.numAgents > 0 and p.seat >= 0 and
+          p.seat <= sim.seatNames.high and sim.seatNames[p.seat].len > 0:
         sim.seatNames[p.seat]
       else:
         p.address

@@ -1,6 +1,6 @@
 ## An end-to-end episode: a real replay, re-derived hash for hash, parsed
 ## strictly as UTF-8 by the forensic tool.
-import std/[json, os, osproc, strutils, unicode, unittest]
+import std/[json, os, osproc, unicode, unittest]
 import smac_helpers
 import smac/replays
 
