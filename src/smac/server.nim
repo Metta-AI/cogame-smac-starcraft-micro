@@ -2346,9 +2346,19 @@ proc runServerLoop*(
       joinThread(serverThread)
       break
 
+    # The join budget is a WALL-CLOCK grace (lobbyJoinTimeoutTicks / 24 fps is
+    # the number the no-show message quotes), so fastMode must not fast-forward
+    # lobby ticks while the roster is still short: once the first pod connects
+    # and starts answering with the Sprite v1 Ready packet, allPlayersReady is
+    # true every frame and the whole budget burns in a few seconds — a straggler
+    # player pod is then declared a no-show that never had its 60 s. Observed as
+    # 1 of 5 hosted smoke episodes failing player_error "player slot 4 never
+    # joined the lobby within 1440 lobby ticks (~60s)" on 0.1.0.
+    let joinBudgetOpen =
+      sim.phase == Lobby and sim.players.len < sim.config.minPlayers
     let frameAdvance = runFrameLimiter(
       lastTick,
-      not replayLoaded and config.fastMode,
+      not replayLoaded and config.fastMode and not joinBudgetOpen,
       sockets,
       playerIndices,
       sim.players.len
