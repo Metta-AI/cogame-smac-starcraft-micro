@@ -1172,22 +1172,26 @@ proc selectArcVictims(
     ax = attacker.x + CollisionW div 2
     ay = attacker.y + CollisionH div 2
     (ux, uy) = aimVector(attacker.arcAimBrads)
-    ## MICRO: the wedge is the role's own reach at the configured half-angle
-    ## (bladeArcBrads = 32 brads = 45 degrees), so the same arc machinery
-    ## resolves a blade's swing and a swarm unit's.
-    reach =
-      if micro: float(sim.config.roleReach(attacker.role))
-      else: float(SprayPaintReach)
-    halfAngle = float(sim.config.bladeArcBrads) * PI /
-      float(AimBradsTurn div 2)
+    reach = float(SprayPaintReach)
     # The cone's half-width grows linearly with forward distance, hitting
     # SprayPaintMaxWidth / 2 exactly at the reach cap.
-    halfWidthSlope =
-      if micro: tan(min(halfAngle, 1.5))
-      else: float(SprayPaintMaxWidth) / (2.0 * reach)
-    bodyRadius =
-      if micro: float(PlayerHalf)
-      else: float(SprayPaintBodyRadius)
+    halfWidthSlope = float(SprayPaintMaxWidth) / (2.0 * reach)
+    ## MICRO: the wedge is the role's own reach at the configured half-angle
+    ## (bladeArcBrads = 32 brads = 45 degrees), and it is tested with INTEGER
+    ## arithmetic against the engine's own 1024-scaled unit-vector table. A
+    ## float `tan()` here would be a NEW floating-point value on the hashed
+    ## path, and wasm's libm need not agree with glibc's in the last bit — the
+    ## design's determinism rule exists for exactly this.
+    microReach = sim.config.roleReach(attacker.role) + PlayerHalf
+    microHalf = clamp(sim.config.bladeArcBrads, 1, 63)
+    aimIndex = ((attacker.arcAimBrads mod AimBradsTurn) + AimBradsTurn) mod
+      AimBradsTurn
+    unitX = AimUnitX[aimIndex]
+    unitY = AimUnitY[aimIndex]
+    # cos and sin of the half-angle, from the same 1024-scaled table:
+    # AimUnitX is cos(brads) and AimUnitY is -sin(brads).
+    cosHalf = AimUnitX[microHalf]
+    sinHalf = -AimUnitY[microHalf]
   for i in 0 ..< sim.players.len:
     if i == attackerIndex or not sim.players[i].alive:
       continue
@@ -1195,14 +1199,34 @@ proc selectArcVictims(
     ## wedge and ignores friendly bodies entirely.
     if micro and not sim.config.microOpposed(attackerIndex, i):
       continue
+    if micro:
+      let
+        dx = sim.players[i].x + CollisionW div 2 - ax
+        dy = sim.players[i].y + CollisionH div 2 - ay
+        # 1024-scaled dot and cross products with the locked aim direction.
+        forwardI = (dx * unitX + dy * unitY) div 1024
+        perpI = abs(dx * unitY - dy * unitX) div 1024
+      if forwardI <= 0 or forwardI > microReach:
+        continue
+      # |perp| / forward <= tan(half)  <=>  |perp| * cos(half) <= forward * sin(half)
+      if perpI * cosHalf > forwardI * sinHalf:
+        continue
+      if not sim.paintPathClear(
+        ax, ay,
+        sim.players[i].x + CollisionW div 2,
+        sim.players[i].y + CollisionH div 2
+      ):
+        continue
+      result.add(i)
+      continue
     let
       vx = float(sim.players[i].x + CollisionW div 2 - ax)
       vy = float(sim.players[i].y + CollisionH div 2 - ay)
       forward = vx * ux + vy * uy
       perpendicular = abs(vx * uy - vy * ux)
-    if forward <= 0 or forward > reach + bodyRadius:
+    if forward <= 0 or forward > reach + float(SprayPaintBodyRadius):
       continue
-    if perpendicular > forward * halfWidthSlope + bodyRadius:
+    if perpendicular > forward * halfWidthSlope + float(SprayPaintBodyRadius):
       continue
     if not sim.paintPathClear(
       ax,
