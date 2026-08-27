@@ -81,9 +81,38 @@ suite "directives":
     check pair.orders[0].intent == intKite
     check pair.orders[1].intent == intHold
 
-  test "zero cogs raises, which is what the retry exists for":
-    expect DirectiveError:
-      discard parse("""{"note":"nothing to say","cogs":[]}""")
+  test "a wrong-id entry lands by position and stays an LLM order":
+    ## Design §Reply schema, the `cogs[].id` row: "an unmatched entry is
+    ## assigned to the seat's unit by position". The order is the MODEL's, so it
+    ## reads `fromReply` and the directive stays `llm`-sourced — a model that
+    ## invented its own naming is rescued, not fallen back on.
+    let d = parse("""{"note":"n","cogs":[{"id":"NOT-A-SEAT","intent":"kite",""" &
+      """"target_id":5,"say":"E5"}]}""")
+    check d.orders.len == 1
+    check d.orders[0].id == "RANGER-alpha"
+    check d.orders[0].fromReply
+    check d.orders[0].intent == intKite
+    check d.orders[0].targetId == 5
+    check d.orders[0].say == "E5"
+    check d.source == dsLlm
+
+  test "zero cog entries repair; only unrecoverable text raises":
+    ## Design §Reply schema, the `cogs` row: "an empty or missing array keeps
+    ## last turn's directive, else focusfire's" — a REPAIR the caller applies
+    ## (tests/test_engine.nim pins both halves), not a parse failure. So the
+    ## reply parses, the model's note survives, every order reads
+    ## `fromReply = false` for the caller to fill, and no retry is burned.
+    for text in ["""{"note":"nothing to say","cogs":[]}""",
+                 """{"note":"nothing to say"}""",
+                 """{"note":"nothing to say","cogs":["E3"]}"""]:
+      let d = parse(text)
+      check d.orders.len == 1
+      check d.orders[0].cogIndex == 0
+      check not d.orders[0].fromReply
+      check d.note == "nothing to say"
+      check d.source == dsLlm
+    ## Only a reply from which NO object can be recovered at all is fatal, and
+    ## that is what the retry and then the scripted fallback exist for.
     expect DirectiveError:
       discard parse("no json at all here")
 

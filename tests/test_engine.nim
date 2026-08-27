@@ -104,3 +104,47 @@ suite "engine":
     check "MUST begin with '{'" in SystemPrompt
     check "target_id" in SystemPrompt
     check "focus|attack_move|kite|hold|screen|retreat|regroup" in SystemPrompt
+
+  test "a reply naming no cog keeps last turn's directive, else focusfire's":
+    ## Design §Reply schema, the `cogs` row. The reply PARSED, so this is a
+    ## repair and not a fallback: the directive stays `llm`-sourced, which is
+    ## what keeps it out of `sim.fallbackTurns` and out of the game log's
+    ## "falling back" line.
+    var sim = newMicroSim()
+    var engine = initDecisionEngine(sim)
+    let
+      commanded = sim.commandedCogs(0)
+      ids = @[sim.cogAlias(commanded[0])]
+      empty = """{"note":"nothing to say","cogs":[]}"""
+    ## Turn 0: nothing to carry on from, so it resolves to focusfire's order.
+    var first = parseSquadDirective(
+      extractJsonObject(empty), ids, commanded, 600, 330,
+      MapWidth - 1, MapHeight - 1)
+    engine.repairMissingOrders(sim, 0, first)
+    let focus = engine.focusfireFor(sim, commanded)
+    check first.orders.len == 1
+    check first.orders[0].cogIndex == commanded[0]
+    check first.orders[0].intent == focus.orders[0].intent
+    check first.orders[0].targetId == focus.orders[0].targetId
+    check first.orders[0].targetX == focus.orders[0].targetX
+    check first.orders[0].targetY == focus.orders[0].targetY
+    check first.source == dsLlm
+    ## Turn k > 0: last turn's directive is what carries on.
+    engine.directives[0] = SquadDirective(
+      source: dsLlm, note: "hold the line",
+      orders: @[CogOrder(cogIndex: commanded[0], id: ids[0], intent: intKite,
+                         targetId: 7, targetX: 111, targetY: 222, say: "E7",
+                         fromReply: true)])
+    engine.haveDirective[0] = true
+    var later = parseSquadDirective(
+      extractJsonObject(empty), ids, commanded, 600, 330,
+      MapWidth - 1, MapHeight - 1)
+    engine.repairMissingOrders(sim, 0, later)
+    check later.orders[0].intent == intKite
+    check later.orders[0].targetId == 7
+    check later.orders[0].targetX == 111
+    check later.orders[0].targetY == 222
+    check later.orders[0].say == "E7"
+    check later.source == dsLlm
+    ## The model's own note survives a repaired turn either way.
+    check later.note == "nothing to say"

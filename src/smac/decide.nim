@@ -530,9 +530,28 @@ proc turn*(
           cx, cy, MapWidth - 1, MapHeight - 1)
         directive.source = dsLlm
         directive.latencyMs = latency
+        ## Design §Reply schema, the `cogs` row: a reply whose entries name no
+        ## commanded cog is REPAIRED — last turn's directive, else `focusfire`'s
+        ## — and stays an LLM turn carrying the model's own note. It is not a
+        ## parse failure: no retry is burned, no `fallback` record is written,
+        ## and the line below deliberately avoids the phrase "falling back",
+        ## which phase 60 greps the game log for and which must mean a seat
+        ## really did degrade to the scripted layer for a turn.
+        var namedCog = false
+        for order in directive.orders:
+          if order.fromReply:
+            namedCog = true
+            break
+        let hadPrevious = seat < engine.haveDirective.len and
+          engine.haveDirective[seat]
         engine.repairMissingOrders(sim, seat, directive)
         engine.directives[seat] = directive
         engine.haveDirective[seat] = true
+        if not namedCog:
+          echo "smac llm: seat ", seat,
+            " repaired: reply named no commanded cog; kept ",
+            (if hadPrevious: "last turn's directive"
+             else: "focusfire's directive"), " on turn ", turnIndex
       except CatchableError as error:
         if responses[position].error.len > 0:
           cause = (if "timeout" in responses[position].error.toLowerAscii():

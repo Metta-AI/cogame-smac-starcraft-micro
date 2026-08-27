@@ -46,7 +46,7 @@ type
     fromReply*: bool           ## a reply entry really named this cog. False
                                ## means the parser filled it in, and the
                                ## caller repairs it from last turn's directive
-                               ## (else holdline's) — never from a default.
+                               ## (else `focusfire`'s) — never from a default.
 
   DirectiveSource* = enum
     dsLlm = "llm"
@@ -242,8 +242,9 @@ proc parseSquadDirective*(
   ## schema bounds rather than rejecting the reply:
   ##
   ## * `note`      truncated to MaxNoteRunes on a rune boundary;
-  ## * `cogs`      extra entries dropped, a missing cog left for the caller to
-  ##               fill from last turn (or from `holdline`);
+  ## * `cogs`      extra entries dropped; a cog no entry named is left with
+  ##               `fromReply = false` for the caller to fill from last turn
+  ##               (else from `focusfire`);
   ## * `cogs[].id` matched case-insensitively and suffix-wise; an unmatched
   ##               entry is assigned to the next unclaimed commanded cog BY
   ##               POSITION, which is what rescues a model that invented its
@@ -258,16 +259,20 @@ proc parseSquadDirective*(
   ## * `say`       truncated to MaxSayRunes on a rune boundary, then the
   ##               starter's printable-ASCII shout filter.
   ##
-  ## Raises DirectiveError only when NO usable cog entry can be recovered —
-  ## that is the one condition the retry and then the scripted fallback exist
-  ## for.
+  ## Never raises for a reply that PARSED: a `cogs` collection with no entry
+  ## this seat can use (empty, missing, or nothing but non-objects) leaves every
+  ## order with `fromReply = false`, and the caller's `repairMissingOrders`
+  ## resolves it to last turn's directive, else `focusfire`'s — the schema's own
+  ## repair, not a parse failure, so it burns no retry and records no fallback.
+  ## Only text from which no JSON object can be recovered at all raises
+  ## (`extractJsonObject`), and that is the one condition the retry and then the
+  ## scripted fallback exist for.
   doAssert commandedIds.len == commandedCogs.len
   result.note = sanitizeNote(payload{"note"}.getStr())
   result.source = dsLlm
   var
     claimed = newSeq[bool](commandedIds.len)
     byPosition = 0
-    matched = 0
     orders = newSeq[CogOrder](commandedIds.len)
   for i in 0 ..< commandedIds.len:
     orders[i] = CogOrder(
@@ -296,7 +301,6 @@ proc parseSquadDirective*(
         continue                     ## extra entries are dropped, never fatal
       slot = byPosition
     claimed[slot] = true
-    inc matched
     orders[slot].fromReply = true
     let node = entry.node
     orders[slot].intent = parseIntent(node{"intent"}.getStr())
@@ -309,8 +313,6 @@ proc parseSquadDirective*(
     orders[slot].faceX = face.x
     orders[slot].faceY = face.y
     orders[slot].say = sanitizeSay(node{"say"}.getStr())
-  if matched == 0:
-    raise newException(DirectiveError, "reply named no commanded cog")
   result.orders = orders
 
 proc directiveRecord*(
