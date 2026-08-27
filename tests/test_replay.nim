@@ -137,6 +137,40 @@ suite "replay":
     finally:
       setCurrentDir(previous)
 
+  test "a hash the sim cannot reproduce IS reported, even past playback":
+    ## The gate has to be able to fail. One recorded hash deep in the file is
+    ## corrupted; the display player is nowhere near that tick, so only the
+    ## whole-match precompute walk crosses it — and `replayMismatchTick` (what
+    ## `smac_mismatch_tick()` and the chrome's integrity banner read) must
+    ## still name the tick. Before r1 review B3 the walk's detection stayed on
+    ## its private builder and the exported accessor read -1 out of a process
+    ## that had already echoed the mismatch.
+    let previous = getCurrentDir()
+    setCurrentDir(GameDir)
+    try:
+      createDir(Fixture)
+      let path = Fixture / "corrupt.bitreplay"
+      discard recordEpisode(path)
+      var data = loadReplay(path)
+      check data.hashes.len > 8
+      let victim = data.hashes.len - 4
+      let victimTick = int(data.hashes[victim].tick)
+      data.hashes[victim].hash = not data.hashes[victim].hash
+      var run = initReplayRuntime(
+        data, mismatchQuit = false, gameEventLoggingEnabled = false)
+      # The display player is parked on the spectator start tick, hundreds of
+      # ticks short of the corruption.
+      check run.sim.tickCount < victimTick
+      check run.player.hashMismatchTick == -1
+      # The walk crosses every recorded tick and publishes what it finds.
+      run.player.advanceReplayScan(int.high)
+      check run.player.scanComplete
+      check run.player.scanMismatchTick == victimTick
+      check run.player.replayMismatchTick == victimTick
+      removeFile(path)
+    finally:
+      setCurrentDir(previous)
+
   test "the results record embedded in the replay is strict UTF-8 JSON":
     var sim = newMicroSim()
     # A non-ASCII policy label and a non-ASCII note make the UTF-8 path real.

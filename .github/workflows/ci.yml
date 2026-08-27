@@ -331,6 +331,13 @@ jobs:
         # and the native server disagree on a single bit -- which is exactly
         # what a 32-bit int overflow or a new float on the hashed path looks
         # like, and what the native tests can never see.
+        #
+        # The script drives playback to the LAST recorded tick (the trailing
+        # argument is a frame-count SAFETY CAP, not the measurement) and reads
+        # the verdict of both checking halves. A fixed 300-frame budget at 1
+        # tick/frame left the display player short of the diverging tick on a
+        # 1085-tick replay, so the gate printed the mismatch and exited 0
+        # (r1 review B3).
         run: |
           set -euo pipefail
           replay=""
@@ -339,7 +346,7 @@ jobs:
           done
           test -n "${replay}" || {
             echo "::error::no smoke replay for the wasm hash gate"; exit 1; }
-          node tools/wasm_replay_smoke.cjs dist/static-replay-viewer "${replay}" 300
+          node tools/wasm_replay_smoke.cjs dist/static-replay-viewer "${replay}" 4000
 
       - name: Upload the viewer smoke evidence
         # Always: the screenshot and the JSON are most useful when the job is red.

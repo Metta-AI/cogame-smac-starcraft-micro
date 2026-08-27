@@ -73,18 +73,32 @@ stay separate FILES so the CI float grep can read them on their own.
 * **Never add a variant without adding it to the manifest test's sweep** — it
   already builds and steps EVERY variant, including the 25-unit `corridor`.
 
-## OPEN: the wasm hash gate logs a divergence it does not fail on
+## RESOLVED: the wasm hash gate, and the divergence it could not fail on
 
-`tools/wasm_replay_smoke.cjs` prints
+`tools/wasm_replay_smoke.cjs` used to print
 
-    Replay hash mismatch at tick ~450; expected N, got M.
+    Replay hash mismatch at tick 319; expected N, got M.
 
-on the certification-fixture replay, and then exits 0 — `smac_mismatch_tick()`
-stays -1 while `checkReplayHash` only `echo`es, so the gate reports the
-divergence without gating on it. CI is green with the line present.
+on the certification-fixture replay and then exit 0. Both halves are fixed, and
+both fixes are load-bearing — do not undo either:
 
-Three genuine floating-point values were found and removed from the hashed
-path while chasing it, and each moved the tick without clearing it:
+1. **The cause** was `sim.battleIndex`: hashed state (`sim_state.nim`) written
+   only by the live tick loop, so every replay diverged one tick after the
+   first battle ended. The switch now lives in `scenario.advanceBattle`, called
+   on record AND on playback (`stepReplay`) — after the ending tick's hash
+   check, because the live loop writes that hash before the switch. Any future
+   state that a spectator-visible transition moves outside `sim.step` goes the
+   same way: ONE proc, both call sites, mind the order.
+2. **The gate** read the display player's own `hashMismatchTick` while the
+   precompute walk — the half that crosses every recorded tick — detected the
+   divergence on its private builder. `replays.replayMismatchTick` now reports
+   both halves, the walk publishes into `scanMismatchTick` (sticky across
+   seeks), and the gate drives playback to the LAST recorded tick instead of a
+   fixed 300 frames. A gate that cannot fail is not a gate.
+
+Three genuine floating-point values were found and removed from the hashed path
+while chasing this, and each moved the tick without clearing it — they were all
+real, keep them integer:
 
 1. `tan(halfAngle)` in the micro arc wedge (new in this fork) -> the integer
    `AimUnitX/AimUnitY` cross/dot test;
@@ -94,21 +108,11 @@ path while chasing it, and each moved the tick without clearing it:
 3. the scripted army's `bradsOfVector` (`arctan2` + `round`) -> the integer
    `bradsOfVectorInt`.
 
-What is left to check, in order of suspicion:
+`tests/test_replay.nim` re-derives a full three-battle recording natively, hash
+for hash, so a regression is red in the test job as well as in the wasm gate.
 
-* `updateAnimatedDiamonds` -> `diamondSpinAngle` (`sin`/`cos`) -> the live wall
-  mask -> `pushPlayersOutOfDiamonds`, which moves HASHED positions. This is
-  inherited and unchanged, so if it is the cause the starter has the same
-  latent divergence and simply never failed on it;
-* `selectFireTarget`'s corridor maths — every term should now be an exact
-  binary double, but the silhouette sweep and `crossed.sort()` are worth
-  re-deriving on both targets;
-* whether `smac_mismatch_tick()` is reading the field `checkReplayHash`
-  actually sets. Fix the reporting FIRST: a gate that cannot fail is not a
-  gate, and until it can fail no amount of chasing proves anything.
-
-Do not "fix" this by deleting the warning. The per-tick hash chain is the whole
-reason the enemy army costs zero replay bytes.
+Do not "fix" a future warning by deleting it. The per-tick hash chain is the
+whole reason the enemy army costs zero replay bytes.
 
 ## CI is the only harness
 
