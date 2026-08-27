@@ -73,6 +73,43 @@ stay separate FILES so the CI float grep can read them on their own.
 * **Never add a variant without adding it to the manifest test's sweep** — it
   already builds and steps EVERY variant, including the 25-unit `corridor`.
 
+## OPEN: the wasm hash gate logs a divergence it does not fail on
+
+`tools/wasm_replay_smoke.cjs` prints
+
+    Replay hash mismatch at tick ~450; expected N, got M.
+
+on the certification-fixture replay, and then exits 0 — `smac_mismatch_tick()`
+stays -1 while `checkReplayHash` only `echo`es, so the gate reports the
+divergence without gating on it. CI is green with the line present.
+
+Three genuine floating-point values were found and removed from the hashed
+path while chasing it, and each moved the tick without clearing it:
+
+1. `tan(halfAngle)` in the micro arc wedge (new in this fork) -> the integer
+   `AimUnitX/AimUnitY` cross/dot test;
+2. the ranger's Gaussian shot jitter (`gauss` + `sin`/`cos`, inherited but
+   never exercised by the starter, whose paint loadout has no gun) -> an
+   integer milli-brad draw off the same table;
+3. the scripted army's `bradsOfVector` (`arctan2` + `round`) -> the integer
+   `bradsOfVectorInt`.
+
+What is left to check, in order of suspicion:
+
+* `updateAnimatedDiamonds` -> `diamondSpinAngle` (`sin`/`cos`) -> the live wall
+  mask -> `pushPlayersOutOfDiamonds`, which moves HASHED positions. This is
+  inherited and unchanged, so if it is the cause the starter has the same
+  latent divergence and simply never failed on it;
+* `selectFireTarget`'s corridor maths — every term should now be an exact
+  binary double, but the silhouette sweep and `crossed.sort()` are worth
+  re-deriving on both targets;
+* whether `smac_mismatch_tick()` is reading the field `checkReplayHash`
+  actually sets. Fix the reporting FIRST: a gate that cannot fail is not a
+  gate, and until it can fail no amount of chasing proves anything.
+
+Do not "fix" this by deleting the warning. The per-tick hash chain is the whole
+reason the enemy army costs zero replay bytes.
+
 ## CI is the only harness
 
 There is no Nim, no Docker and no emsdk in the authoring sandbox. `ci.yml` runs:
