@@ -321,6 +321,26 @@ proc archiveBattle*(sim: var SimServer) =
     won: sim.endRule == EndRuleVictory
   )
 
+proc advanceBattle*(sim: var SimServer) =
+  ## THE BATTLE-SWITCH STATE TRANSITION, applied by THIS proc on record AND on
+  ## playback — the same rule as `applyStop` below, and for the same reason.
+  ##
+  ## `battleIndex` is HASHED state (sim_state.nim's micro block) but the switch
+  ## itself cannot happen inside `sim.step`: the tick loop is what knows a
+  ## battle just ended and how many have run. Written only by the live loop it
+  ## made every multi-battle replay diverge from its recorded hash chain one
+  ## tick after the first battle ended — the recording carried
+  ## `battleIndex = 1`, the re-derived sim kept 0, and every hosted replay of a
+  ## three-battle episode showed the integrity banner (r1 review B1).
+  ##
+  ## ORDER MATTERS: the live loop writes the ending tick's hash BEFORE calling
+  ## this, so playback must call it AFTER checking that tick's hash. Both call
+  ## sites do (server.nim's tick loop, replays.nim's stepReplay).
+  if not sim.config.microMode():
+    return
+  inc sim.battleIndex
+  sim.gameIndex = sim.battleIndex
+
 proc applyStop*(sim: var SimServer, tick: int) =
   ## THE LOAD-BEARING WALL-CLOCK STOP. The engine's 690 s budget is a wall-clock
   ## fact and cannot be re-derived from sim state, so it is recorded as ONE

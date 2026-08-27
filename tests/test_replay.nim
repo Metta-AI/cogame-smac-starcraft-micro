@@ -45,7 +45,9 @@ proc recordEpisode(path: string): SimServer =
     if before != GameOver and sim.phase == GameOver:
       inc battles
       sim.archiveBattle()
-      sim.gameIndex = battles
+      # Exactly what the server's tick loop does after writing this tick's
+      # hash, by the same proc playback calls (scenario.advanceBattle).
+      sim.advanceBattle()
   writer.writeChat(tickTime(sim.tickCount), 0,
     "{\"k\":\"result\",\"results\":" & sim.microResultsJson() & "}")
   sim

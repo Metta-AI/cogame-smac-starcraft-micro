@@ -501,6 +501,10 @@ proc advanceReplayGame(sim: var SimServer) =
   ## frozen on game 1 for the whole episode and the visitor half is never
   ## announced. Archiving here is also what lets the momentum series stay
   ## cumulative across the two games.
+  ##
+  ## The micro battle switch is NOT here: `battleIndex` IS in `gameHash`, so it
+  ## has to be mirrored after the ending tick's hash check rather than before
+  ## it — see `sim.advanceBattle` at the bottom of `stepReplay`.
   if sim.config.numAgents <= 0 or sim.config.regimes.len == 0:
     return
   sim.gameHill.add(sim.hillTicks)
@@ -517,10 +521,18 @@ proc stepReplay*(replay: var ReplayPlayer, sim: var SimServer) =
   let inputs = replay.replayInputs(sim.players.len)
   let phaseBefore = sim.phase
   sim.step(inputs, prevInputs)
-  if phaseBefore != GameOver and sim.phase == GameOver:
+  let battleEnded = phaseBefore != GameOver and sim.phase == GameOver
+  if battleEnded:
     sim.advanceReplayGame()
   replay.clearReplayPressedMasks()
   replay.checkReplayHash(sim)
+  if battleEnded:
+    ## The micro battle switch is HASHED (battleIndex), and the live loop
+    ## writes the ending tick's hash before making it — so it is mirrored HERE,
+    ## after that tick's hash check, by the same proc the server calls
+    ## (scenario.advanceBattle). Without this every replay of a multi-battle
+    ## episode diverges at the first battle boundary (r1 review B1).
+    sim.advanceBattle()
 
 proc buildLullSpans*(
   beatTicks: seq[int],
