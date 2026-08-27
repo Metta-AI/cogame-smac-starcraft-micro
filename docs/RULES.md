@@ -219,14 +219,15 @@ target without communicating:
 4. With no living enemy: everyone `regroup`.
 
 **`charge`** — the second filler, weaker BY CONSTRUCTION and different in
-SHAPE: unit *k* issues `attack_move` at the ***k*-th farthest** living enemy
-from itself, every turn — seat 0 at the enemy deepest in the formation, seat 1
-at the second deepest from it, and so on, ranked by squared distance with the
-enemy id as the tie-break and wrapped when fewer enemies are standing. Nobody
-kites, nobody screens. Two weaknesses in one rule: the squad splits its damage
-across five enemies instead of killing one, and every unit walks **past**
-whatever is already hitting it to reach something deep in the enemy line, so it
-spends the fight travelling under fire instead of fighting.
+SHAPE: unit *k* issues `attack_move` at the **(*k* + turn)-th deepest** living
+enemy in the formation, measured from our squad centre — ranked by squared
+distance descending, with the enemy id as the tie-break, wrapped when fewer
+enemies are standing. Nobody kites, nobody screens. Three weaknesses in one
+rule: the squad pushes to the **far side** of the enemy army and fights it from
+the inside (our damage is capped by the weapon cooldown, the number of enemies
+in contact with us is not); the seat-indexed rank splits the damage five ways
+instead of killing anything; and the rotating rank abandons a half-killed enemy
+every turn.
 
 ## What is NOT modelled
 

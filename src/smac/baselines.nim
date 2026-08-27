@@ -134,12 +134,13 @@ proc scriptedDirective*(
   ##
   ## `charge` — weaker BY CONSTRUCTION and different in SHAPE, so the ladder
   ## gets a spread rather than two versions of one bot: unit k `attack_move`s at
-  ## the k-th FARTHEST living enemy from ITSELF, every turn, and nobody kites or
-  ## screens. That is two weaknesses in one rule — the squad splits its damage
-  ## across five enemies instead of killing one, and every unit walks past
-  ## whatever is already hitting it to reach something deep in the enemy
-  ## formation, so it spends the fight travelling under fire instead of
-  ## fighting. tests/test_control.nim pins `focus > charge` on all four shipped
+  ## the (k + turn)-th DEEPEST living enemy in the formation as seen from our
+  ## squad centre, and nobody kites or screens. Three weaknesses in one rule —
+  ## the squad pushes to the far side of the enemy army and fights it from the
+  ## inside (our damage is cooldown-capped, the number of enemies in contact is
+  ## not), the damage splits five ways instead of killing anything, and the
+  ## rotating rank abandons a half-killed enemy every turn.
+  ## tests/test_control.nim pins `focus > charge` on all four shipped
   ## compositions.
   result.source = dsScripted
   result.note = (if kind == blCharge: "charge" else: "focus fire")
@@ -173,14 +174,23 @@ proc scriptedDirective*(
       result.orders.add(order)
       continue
     if kind == blCharge:
-      ## OVER-COMMIT, seat-indexed: seat 0 attack-moves at the enemy FARTHEST
-      ## from it, seat 1 at the second farthest from IT, and so on. Two
-      ## deliberate weaknesses in one integer rule — the squad splits its damage
-      ## across five different enemies, and every unit walks PAST the enemies
-      ## already on it to reach one deep in the formation, taking the whole
-      ## journey's fire without swinging at what is next to it. Pure function of
-      ## the state, so it is as re-derivable as the rest of the baseline.
-      let near = sim.nthDeepestEnemy(px, py, cogIndex)
+      ## OVER-COMMIT, AND NEVER COMMIT. Three deliberate weaknesses in one
+      ## integer rule, and every one of them is a real bad habit:
+      ##   * the target is measured from OUR SQUAD CENTRE, deepest first, so
+      ##     the whole squad pushes to the FAR side of the enemy formation and
+      ##     ends up fighting it from the inside — our damage is capped by the
+      ##     weapon cooldown, the number of enemies in contact with us is not;
+      ##   * the rank is seat-indexed, so five units pick five different enemies
+      ##     and the damage splits instead of killing anything;
+      ##   * the rank also rotates with the TURN, so a half-killed enemy is
+      ##     abandoned every turn. Nobody kites, nobody screens, nobody
+      ##     finishes.
+      ## Still a pure function of the state (turn = gameTicksElapsed div
+      ## turnTicks), so it is as re-derivable as the rest of the baseline.
+      let
+        centre = microCentre(sim)
+        turn = sim.gameTicksElapsed() div max(1, sim.config.turnTicks)
+        near = sim.nthDeepestEnemy(centre.x, centre.y, cogIndex + turn)
       let pick = (if near >= 0: near else: order0)
       order.intent = intAttackMove
       order.targetId = sim.config.enemyIdOf(pick)

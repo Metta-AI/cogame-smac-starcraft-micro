@@ -228,13 +228,19 @@ suite "control":
       let
         focus = play(blFocusFire, config)
         charge = play(blCharge, config)
+      # Printed for every composition, not only the failing one: the numbers
+      # ARE the tuning record, and a reviewer reading this suite should not have
+      # to re-run it to see the spread.
+      echo "  ", scenario[0].len, "v", scenario[1].len, " ",
+        scenario[0][0], "/", scenario[1][0], ": focus=", focus,
+        " charge=", charge, " spread=", focus - charge
       # The ladder spread the design note argues for is a property of the
       # RULES, not of one composition. `charge` over-commits by construction:
-      # seat k attack-moves at the k-th FARTHEST enemy, so the squad both splits
-      # its damage across five targets and walks past whatever is already
-      # hitting it. `focusfire` concentrates damage and, for a melee unit, hits
-      # what is on it rather than chasing a distant kill order — which is what
-      # r1's measurements exposed: five blades chasing one kill order through a
+      # the squad pushes at the enemy DEEPEST in the formation, splits its
+      # damage five ways and abandons a half-killed enemy every turn.
+      # `focusfire` concentrates damage and, for a melee unit, hits what is on
+      # it rather than chasing a distant kill order — which is what r1's
+      # measurements exposed: five blades chasing one kill order through a
       # twenty-unit swarm scored 0.327 against charge's 0.930. Both rules are
       # published in docs/RULES.md, and the inequality is STRICT on all four
       # shipped compositions rather than asserted where it happens to hold.
