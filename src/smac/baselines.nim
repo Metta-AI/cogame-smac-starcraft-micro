@@ -124,13 +124,14 @@ proc scriptedDirective*(
 ): SquadDirective =
   ## The directive one baseline issues for the units it governs this turn.
   ##
-  ## `focusfire` — every governed unit derives the SAME kill order from state
-  ## alone. A ranger `focus`es it unless a melee enemy is inside `panicPx`, in
-  ## which case it `kite`s that enemy — it is worth more alive at 300 px than
-  ## dead at 50. A blade `screen`s while a friendly ranger is alive and a melee
-  ## enemy is closing on it; otherwise it `focus`es the kill order, or the enemy
-  ## nearest ITSELF when that one is less than half as far (a melee unit cannot
-  ## walk across a battle to join a focus).
+  ## `focusfire` — every RANGED unit derives the SAME kill order from state
+  ## alone and shoots it from a per-seat standoff post. A ranger `focus`es it
+  ## unless a melee enemy is inside `panicPx`, in which case it `kite`s that
+  ## enemy — it is worth more alive at 300 px than dead at 50. A blade
+  ## `screen`s while a friendly ranger is alive and a melee enemy is closing on
+  ## it; otherwise it `focus`es the enemy nearest ITSELF, because a melee unit
+  ## cannot concentrate fire from where it stands — it can only walk, and five
+  ## blades walking at one enemy are a pile, not a focus.
   ##
   ## `charge` — weaker BY CONSTRUCTION and different in SHAPE, so the ladder
   ## gets a spread rather than two versions of one bot: unit k `attack_move`s at
@@ -214,27 +215,21 @@ proc scriptedDirective*(
         order.targetY = sim.players[threat].y + CollisionH div 2
         order.say = "kite"
     else:
-      ## MELEE, and this is where focus fire has to stop being a RANGED idea: a
-      ## blade that walks past the units already eating it to reach the squad's
-      ## kill order arrives dead and never swings once. So it takes the enemy
-      ## nearest ITSELF when that enemy is less than HALF the distance of the
-      ## kill order (integer: 4 * dNear < dOrder on squared distances) and keeps
-      ## the shared kill order whenever the two are comparably close, which is
-      ## the whole point of the baseline. MEASURED at the pinned seed: without
-      ## this, five blades chasing one kill order through a twenty-unit swarm
-      ## scored 0.327 while `charge` scored 0.930.
+      ## MELEE, and this is where focus fire stops being a RANGED idea. A blade
+      ## cannot trade at range: it walks to its target, and five blades sent at
+      ## ONE enemy converge into a pile that swings at a single low-hp unit
+      ## while the rest of the army chews on them. It engages the enemy nearest
+      ## ITSELF instead — hit what you can reach — and the squad's shared kill
+      ## order is left to the rangers, who can actually concentrate fire from
+      ## where they stand. MEASURED at the pinned seed: five blades chasing one
+      ## kill order through a twenty-unit swarm scored 0.327, and 0.925 with the
+      ## half-distance version of this rule, against `charge`'s 0.942.
       let near = sim.livingEnemyNearest(px, py)
-      if near >= 0 and near != order0:
-        let
-          nx = sim.players[near].x + CollisionW div 2
-          ny = sim.players[near].y + CollisionH div 2
-          dNear = distSq(px, py, nx, ny)
-          dOrder = distSq(px, py, order.targetX, order.targetY)
-        if 4 * dNear < dOrder:
-          order.targetId = sim.config.enemyIdOf(near)
-          order.targetX = nx
-          order.targetY = ny
-          order.say = sim.cogAlias(near)
+      if near >= 0:
+        order.targetId = sim.config.enemyIdOf(near)
+        order.targetX = sim.players[near].x + CollisionW div 2
+        order.targetY = sim.players[near].y + CollisionH div 2
+        order.say = sim.cogAlias(near)
       let ranger = weakestRanger(sim)
       if ranger >= 0:
         let threat = nearestMeleeEnemy(sim, ranger)

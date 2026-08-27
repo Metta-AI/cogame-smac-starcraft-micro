@@ -402,12 +402,24 @@ proc rangerPost*(
   ## it, starting from the direction "enemy -> our squad centre" and
   ## alternating outward. Nothing clear -> the enemy's own position, which is
   ## an advance rather than a stall.
+  ##
+  ## The start of the probe is rotated by SEAT (one probe step per seat), which
+  ## is what `cogIndex` is for. Without it every ranger focusing the same kill
+  ## order evaluates the identical 16 candidates in the identical order, takes
+  ## the identical first clear one, and all five walk into ONE point: they
+  ## collide, wedge, and take a whole enemy squad's fire in a pile. MEASURED at
+  ## the pinned seed (five rangers against six): 0.327 crowded against 0.908
+  ## for a baseline that never shares a target at all. Five seats now sit on
+  ## five posts spread across the 90 degrees of the standoff circle facing our
+  ## side, all shooting the same target — which is what focus fire is supposed
+  ## to look like.
   let
     ex = sim.players[enemyIndex].x + CollisionW div 2
     ey = sim.players[enemyIndex].y + CollisionH div 2
     centre = microCentre(sim)
     standoff = max(1, sim.config.rangerStandoff)
-    base = bradsOfVector(centre.x - ex, centre.y - ey)
+    base = bradsOfVector(centre.x - ex, centre.y - ey) +
+      max(0, cogIndex) * 16
   for step in 0 ..< 16:
     let
       offset = ((step + 1) div 2) * 16 * (if step mod 2 == 0: 1 else: -1)
