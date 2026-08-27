@@ -73,6 +73,13 @@ suite "replay":
       check fileExists(path)
       check getFileSize(path) > 0
       check sim.battleLog.len >= 1
+      # Item 7: an all-scripted episode played to its NATURAL end reports
+      # `complete` — not `deadline`, not `fault`. A regression that ends every
+      # episode on the wall clock or on a tripped invariant would otherwise
+      # keep every job green (the smoke script only PRINTS the reason).
+      let results = parseJson(sim.microResultsJson())
+      check results["reason"].getStr() == ReasonComplete
+      check results["games"].getInt() == 3
       let data = loadReplay(path)
       check data.chats.len >= 1
       check data.hashes.len > 0
