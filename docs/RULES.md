@@ -210,18 +210,23 @@ target without communicating:
    enemy is within `panicPx` = **150 px** of it, in which case it issues `kite`
    with that enemy as `target_id`.
 3. A living **blade** issues `screen` when at least one friendly ranger is alive
-   and some melee enemy is within 260 px of that ranger; otherwise `focus` on
-   the kill order.
+   and some melee enemy is within 260 px of that ranger; otherwise `focus` — on
+   the kill order, or on the living enemy nearest **itself** when that one is
+   less than **half** as far away (squared distances, integer: `4 * dNear <
+   dOrder`). A melee unit cannot walk across a battle to join a focus: it would
+   arrive dead without swinging once, so it hits what is already on it and
+   shares the kill order whenever the two are comparably close.
 4. With no living enemy: everyone `regroup`.
 
 **`charge`** — the second filler, weaker BY CONSTRUCTION and different in
-SHAPE: unit *k* issues `attack_move` at the ***k*-th nearest** living enemy to
-itself, every turn — seat 0 at the enemy nearest it, seat 1 at the second
-nearest to it, and so on, ranked by squared distance with the enemy id as the
-tie-break and wrapped when fewer enemies are standing. Nobody kites, nobody
-screens, and the five units deliberately pick five different enemies, so the
-squad splits its damage across the army, every enemy lives longer, and every
-extra tick an enemy lives is another swing at us.
+SHAPE: unit *k* issues `attack_move` at the ***k*-th farthest** living enemy
+from itself, every turn — seat 0 at the enemy deepest in the formation, seat 1
+at the second deepest from it, and so on, ranked by squared distance with the
+enemy id as the tie-break and wrapped when fewer enemies are standing. Nobody
+kites, nobody screens. Two weaknesses in one rule: the squad splits its damage
+across five enemies instead of killing one, and every unit walks **past**
+whatever is already hitting it to reach something deep in the enemy line, so it
+spends the fight travelling under fire instead of fighting.
 
 ## What is NOT modelled
 

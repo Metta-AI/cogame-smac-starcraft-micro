@@ -96,12 +96,12 @@ proc nearestMeleeEnemy(sim: SimServer, cogIndex: int): int =
       best = d
       result = j
 
-proc nthNearestEnemy(sim: SimServer, x, y, rank: int): int =
-  ## The `rank`-th nearest living enemy to a map point (0 = nearest), ranked by
-  ## integer squared distance with the enemy id as the tie-break so the order is
-  ## total and machine-independent. The rank wraps when fewer enemies are
-  ## standing than the rank asks for, so a five-unit squad always has a target.
-  ## -1 when the enemy army is gone.
+proc nthDeepestEnemy(sim: SimServer, x, y, rank: int): int =
+  ## The `rank`-th FARTHEST living enemy from a map point (0 = farthest),
+  ## ranked by integer squared distance with the enemy id as the tie-break so
+  ## the order is total and machine-independent. The rank wraps when fewer
+  ## enemies are standing than it asks for, so a five-unit squad always has a
+  ## target. -1 when the enemy army is gone.
   var ranked: seq[(int, int, int)] = @[]   # (distSq, enemy id, cog index)
   for j in sim.config.friendlyCount() ..< sim.players.len:
     if not sim.players[j].alive:
@@ -114,7 +114,7 @@ proc nthNearestEnemy(sim: SimServer, x, y, rank: int): int =
   if ranked.len == 0:
     return -1
   ranked.sort()
-  ranked[rank mod ranked.len][2]
+  ranked[ranked.high - (rank mod ranked.len)][2]
 
 proc scriptedDirective*(
   ctl: ControlState,
@@ -128,19 +128,19 @@ proc scriptedDirective*(
   ## alone. A ranger `focus`es it unless a melee enemy is inside `panicPx`, in
   ## which case it `kite`s that enemy — it is worth more alive at 300 px than
   ## dead at 50. A blade `screen`s while a friendly ranger is alive and a melee
-  ## enemy is closing on it, otherwise `focus`es the kill order.
+  ## enemy is closing on it; otherwise it `focus`es the kill order, or the enemy
+  ## nearest ITSELF when that one is less than half as far (a melee unit cannot
+  ## walk across a battle to join a focus).
   ##
   ## `charge` — weaker BY CONSTRUCTION and different in SHAPE, so the ladder
   ## gets a spread rather than two versions of one bot: unit k `attack_move`s at
-  ## the k-th nearest living enemy to ITSELF, every turn. Nobody kites, nobody
-  ## screens, and the seat-indexed rank means the five units pick five
-  ## DIFFERENT enemies whenever the army is that big — so the squad splits its
-  ## damage, every enemy lives longer, and every extra tick an enemy lives is
-  ## another swing at us. That is the arithmetic (focused damage kills faster
-  ## than spread damage, so it takes less in return) which makes `focusfire`
-  ## beat `charge` on every shipped composition rather than only on the ones
-  ## where "nearest me" happens to differ from the squad's kill order.
-  ## tests/test_control.nim pins the inequality on all four.
+  ## the k-th FARTHEST living enemy from ITSELF, every turn, and nobody kites or
+  ## screens. That is two weaknesses in one rule — the squad splits its damage
+  ## across five enemies instead of killing one, and every unit walks past
+  ## whatever is already hitting it to reach something deep in the enemy
+  ## formation, so it spends the fight travelling under fire instead of
+  ## fighting. tests/test_control.nim pins `focus > charge` on all four shipped
+  ## compositions.
   result.source = dsScripted
   result.note = (if kind == blCharge: "charge" else: "focus fire")
   if governed.len == 0:
@@ -173,10 +173,14 @@ proc scriptedDirective*(
       result.orders.add(order)
       continue
     if kind == blCharge:
-      ## Seat-indexed spreading: seat 0 takes the enemy nearest it, seat 1 the
-      ## second nearest to IT, and so on. Pure function of the state, so it is
-      ## as re-derivable as the rest of the baseline.
-      let near = sim.nthNearestEnemy(px, py, cogIndex)
+      ## OVER-COMMIT, seat-indexed: seat 0 attack-moves at the enemy FARTHEST
+      ## from it, seat 1 at the second farthest from IT, and so on. Two
+      ## deliberate weaknesses in one integer rule — the squad splits its damage
+      ## across five different enemies, and every unit walks PAST the enemies
+      ## already on it to reach one deep in the formation, taking the whole
+      ## journey's fire without swinging at what is next to it. Pure function of
+      ## the state, so it is as re-derivable as the rest of the baseline.
+      let near = sim.nthDeepestEnemy(px, py, cogIndex)
       let pick = (if near >= 0: near else: order0)
       order.intent = intAttackMove
       order.targetId = sim.config.enemyIdOf(pick)
@@ -200,6 +204,27 @@ proc scriptedDirective*(
         order.targetY = sim.players[threat].y + CollisionH div 2
         order.say = "kite"
     else:
+      ## MELEE, and this is where focus fire has to stop being a RANGED idea: a
+      ## blade that walks past the units already eating it to reach the squad's
+      ## kill order arrives dead and never swings once. So it takes the enemy
+      ## nearest ITSELF when that enemy is less than HALF the distance of the
+      ## kill order (integer: 4 * dNear < dOrder on squared distances) and keeps
+      ## the shared kill order whenever the two are comparably close, which is
+      ## the whole point of the baseline. MEASURED at the pinned seed: without
+      ## this, five blades chasing one kill order through a twenty-unit swarm
+      ## scored 0.327 while `charge` scored 0.930.
+      let near = sim.livingEnemyNearest(px, py)
+      if near >= 0 and near != order0:
+        let
+          nx = sim.players[near].x + CollisionW div 2
+          ny = sim.players[near].y + CollisionH div 2
+          dNear = distSq(px, py, nx, ny)
+          dOrder = distSq(px, py, order.targetX, order.targetY)
+        if 4 * dNear < dOrder:
+          order.targetId = sim.config.enemyIdOf(near)
+          order.targetX = nx
+          order.targetY = ny
+          order.say = sim.cogAlias(near)
       let ranger = weakestRanger(sim)
       if ranger >= 0:
         let threat = nearestMeleeEnemy(sim, ranger)
