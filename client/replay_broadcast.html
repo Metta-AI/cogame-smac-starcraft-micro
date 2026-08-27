@@ -3646,12 +3646,19 @@ body[data-embed] #board { top: 0; height: 100%; }
       for (var pi = 0; pi < log.length; pi++) {
         pct.push(log[pi].dmgPct + '% dealt / ' + log[pi].lossPct + '% lost');
       }
+      // Between battles there is one frame window where battlesWon has
+      // ticked but the battle is not yet banked into the log (the server
+      // banks on the transition): never claim NO BATTLE PLAYED against a
+      // counted win, and never print the not-yet-banked score as 0.000.
+      if (!parts.length && m.won > 0) {
+        parts.push(m.won + ' BATTLE' + (m.won === 1 ? '' : 'S') + ' WON');
+      }
       head.className = 'headline ' + (m.won > 0 ? 'red' : 'draw');
       head.textContent = parts.length ? parts.join(' · ') : 'NO BATTLE PLAYED';
       how.textContent =
         (m.theirTotal - m.theirAlive) + ' OF ' + m.theirTotal + ' KILLED · ' +
-        m.won + ' BATTLE' + (m.won === 1 ? '' : 'S') + ' WON · SCORE ' +
-        ((m.score || 0) / 1000).toFixed(3) +
+        m.won + ' BATTLE' + (m.won === 1 ? '' : 'S') + ' WON' +
+        (log.length ? ' · SCORE ' + ((m.score || 0) / 1000).toFixed(3) : '') +
         (pct.length ? ' — ' + pct.join(' · ') : '') +
         (m.reason === 'deadline'
           ? ' — the engine hit its wall-clock budget and scored what was banked.'
