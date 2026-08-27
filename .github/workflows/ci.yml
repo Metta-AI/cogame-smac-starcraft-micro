@@ -149,6 +149,33 @@ jobs:
           done
           exit "${fail}"
 
+      # ------------------------------------------------------------------
+      # The worst-case TEXT fixture (acceptance checklist item 15). Every
+      # replay CI can produce carries zero model text -- docker_smoke.sh runs
+      # with no ANTHROPIC_API_KEY, so every seat plays the scripted baseline and
+      # a scripted baseline says nothing. This records a replay built to hurt
+      # instead: a full-cap say on EVERY unit at once, a full-cap 160-rune note
+      # per seat, and both lines spawned into the arena corners where a bubble
+      # drawn upward has nowhere to go. The tool asserts its own strings are
+      # still full length (a quietly shortened remark leaves a fixture passing
+      # while testing nothing) and that every bubble lands inside the board;
+      # wasm-viewer then plays it through the REAL renderer at three canvas
+      # sizes.
+      - name: Record the worst-case text fixture replay
+        run: |
+          set -euo pipefail
+          nim r --hints:off -d:release --path:src \
+            tools/record_text_fixture.nim dist/text-fixture/text_fixture.replay
+          test -s dist/text-fixture/text_fixture.replay
+
+      - name: Upload the worst-case text fixture replay
+        uses: actions/upload-artifact@v4
+        with:
+          name: text-fixture-replay
+          path: dist/text-fixture/
+          if-no-files-found: error
+          retention-days: 14
+
   # ---------------------------------------------------------------------
   # Packaging smoke: the production image builds, and one real episode runs
   # end to end in raw docker with the certification fixture's seat mix.
@@ -215,8 +242,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     # The bundle is EXECUTED here, not merely built, and it is executed against
-    # the replay docker-smoke just produced -- hence the dependency.
-    needs: docker-smoke
+    # the replay docker-smoke just produced -- hence the dependency. `test` is
+    # the second dependency because it records the worst-case TEXT fixture
+    # replay the renderer fixture step below plays (item 15).
+    needs: [docker-smoke, test]
     steps:
       - uses: actions/checkout@v5
       - uses: docker/setup-buildx-action@v3
@@ -287,6 +316,12 @@ jobs:
           name: smoke-replay
           path: dist/smoke
 
+      - name: Download the worst-case text fixture replay
+        uses: actions/download-artifact@v4
+        with:
+          name: text-fixture-replay
+          path: dist/text-fixture
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -347,6 +382,64 @@ jobs:
           test -n "${replay}" || {
             echo "::error::no smoke replay for the wasm hash gate"; exit 1; }
           node tools/wasm_replay_smoke.cjs dist/static-replay-viewer "${replay}" 4000
+
+      # -----------------------------------------------------------------
+      # THE WORST-CASE RENDERER FIXTURE (acceptance checklist item 15).
+      #
+      # index.html's smoke above loads a replay with ZERO model text in it, so
+      # it cannot say anything about the chrome that exists to show what a model
+      # said. This step plays the hostile fixture replay through the REAL
+      # renderer -- the same wasm module and the same broadcast_core.js
+      # compositor, on the main thread so the harness can see the canvas -- at
+      # three canvas sizes (360x640, 640x360, 1280x720), and the page fails
+      # itself (data-replay-error) unless every bubble is wholly inside the
+      # board and every say/note is still at its full cap.
+      #
+      # The board's text is rasterized in Nim and blitted as sprite pixels, so
+      # nothing in this viewer ever calls canvas fillText and the harness's
+      # fillText hook honestly reports canvas_text.total: 0 for it. The page
+      # therefore asks the renderer where it put each string, through
+      # smac_text_report() (global.shoutTextReportJson) -- the same numbers
+      # tests/test_shouts.nim asserts on natively.
+      # -----------------------------------------------------------------
+      - name: Worst-case renderer text fixture
+        run: |
+          set -euo pipefail
+          test -s dist/text-fixture/text_fixture.replay || {
+            echo "::error::no worst-case text fixture replay in dist/text-fixture"
+            ls -la dist/text-fixture || true
+            exit 1; }
+          cp dist/text-fixture/text_fixture.replay dist/static-replay-viewer/
+          test -s dist/static-replay-viewer/text_fixture.html || {
+            echo "::error::the bundle has no text_fixture.html (Dockerfile.replay-viewer copies it)"
+            exit 1; }
+          python3 -m http.server 8099 \
+            --directory dist/static-replay-viewer >/dev/null 2>&1 &
+          server_pid=$!
+          trap 'kill "${server_pid}" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 40); do
+            if curl -fsS -o /dev/null "http://127.0.0.1:8099/text_fixture.html"; then
+              break
+            fi
+            sleep 0.25
+          done
+          mkdir -p text-fixture-out
+          node tools/ci/viewer_smoke.mjs \
+            --url "http://127.0.0.1:8099/text_fixture.html?replay=text_fixture.replay" \
+            --timeout 90 \
+            --strict-text-bounds \
+            --out text-fixture-out
+
+      - name: Upload the worst-case text fixture evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: text-fixture-smoke
+          path: |
+            text-fixture-out/viewer-smoke.png
+            text-fixture-out/viewer-smoke.json
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Upload the viewer smoke evidence
         # Always: the screenshot and the JSON are most useful when the job is red.

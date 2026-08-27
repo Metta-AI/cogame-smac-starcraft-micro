@@ -125,7 +125,18 @@ There is no Nim, no Docker and no emsdk in the authoring sandbox. `ci.yml` runs:
   `SMOKE_REQUIRE_REPLAY_JSON=0` (the replay is binary `COWLDSMC`);
 * the `wasm-viewer` job — builds the bundle, **executes** it in headless
   chromium against the replay `docker-smoke` produced, then runs
-  `tools/wasm_replay_smoke.cjs` as the native-to-wasm hash gate.
+  `tools/wasm_replay_smoke.cjs` as the native-to-wasm hash gate;
+* the **worst-case text fixture**: `tools/record_text_fixture.nim` records a
+  replay with a full-cap `say` on every unit at once, a full-cap 160-rune note
+  per seat and both lines spawned into the arena corners, and
+  `replay-viewer/text_fixture.html` plays it through the real renderer at three
+  canvas sizes under `viewer_smoke.mjs --strict-text-bounds`. Every replay CI
+  can otherwise produce carries ZERO model text (no API key ⇒ scripted seats ⇒
+  no `say`, no `note`), so this is the only gate that draws the chrome that
+  exists to show what a model said. `tests/test_shouts.nim` asserts the same
+  invariants natively; both read `global.shoutTextReportJson`, because this
+  board's text is rasterized in Nim and blitted — no canvas `fillText` exists
+  for a browser harness to measure.
 
 `tools/replay_summary.py` (standard library only) is the strict-UTF-8 JSON view
 of a binary replay, for forensics and for the phase-60 check.

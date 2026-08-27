@@ -10,6 +10,7 @@ var
   tracker: BroadcastTracker
   packet: seq[uint8]
   lastError: string
+  textReport: string
 
 ## --- Progress stage note ---
 ## wasm32 has no memory protection: when emscripten's malloc fails, a write
@@ -148,6 +149,29 @@ proc smacReplayMaxTick(): cint {.exportc: "smac_replay_max_tick", cdecl.} =
     cint(replay.replayMaxTick())
   else:
     -1
+
+proc smacTextReport(): cint {.exportc: "smac_text_report", cdecl.} =
+  ## Rebuilds the TEXT-BOUNDS REPORT for the frame on screen — the reserved
+  ## shout band, the board rect, and every live bubble's text and map rect —
+  ## and returns its byte length (read the bytes with smac_text_report_ptr).
+  ##
+  ## The board's text is rasterized in Nim and shipped as sprite pixels, so the
+  ## viewer never calls canvas fillText and a browser harness hooking it
+  ## measures nothing (`canvas_text.total: 0`). This is how the worst-case
+  ## renderer fixture (replay-viewer/text_fixture.html) asks the renderer
+  ## itself whether every drawn string fits its frame.
+  if not runtimeLoaded:
+    textReport = ""
+    return 0
+  textReport = game.shoutTextReportJson()
+  cint(textReport.len)
+
+proc smacTextReportPointer(): ptr uint8
+    {.exportc: "smac_text_report_ptr", cdecl.} =
+  if textReport.len == 0:
+    nil
+  else:
+    cast[ptr uint8](textReport[0].addr)
 
 proc smacErrorPointer(): ptr uint8 {.exportc: "smac_error_ptr", cdecl.} =
   if lastError.len == 0:
