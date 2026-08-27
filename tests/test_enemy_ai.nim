@@ -102,7 +102,10 @@ suite "enemy ai":
     ## tick from the recorded masks, so no NEW floating-point value may enter
     ## the hashed path (design SS Determinism, native <-> wasm).
     const Banned = ["float", "sqrt", "hypot", "sin", "cos", "tan",
-                    "arctan", "arcsin", "floor", "ceil", "round"]
+                    "arctan", "arcsin", "floor", "ceil", "round",
+                    # These two are libm behind an integer-looking name, and
+                    # libm is not bit-identical between glibc and wasm.
+                    "aimVector", "bradsOfVector", "gauss"]
     let previous = getCurrentDir()
     setCurrentDir(GameDir)
     try:
