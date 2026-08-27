@@ -598,7 +598,16 @@ proc scanTeamLead(sim: SimServer): seq[int] =
   ## `lives: 12` a micro series of lives is near-flat and shows tag
   ## attrition, not hill momentum, and the hill-tick difference over the
   ## whole episode is the thing a KotH spectator is watching.
-  if sim.config.hill:
+  ##
+  ## MICRO: the two ARMY HP POOLS (design §Readouts 6). Every unit has ONE
+  ## life, so the inherited lives series is the alive count — a five-value step
+  ## function that says nothing until somebody dies, while the thing a micro
+  ## spectator is actually watching is how the two hp pools cross. The client's
+  ## caption says ARMY HP for the same reason (r1 review N9).
+  if sim.config.microMode():
+    for team in sim.teams():
+      result.add(if team == Red: sim.ourHp else: sim.theirHp)
+  elif sim.config.hill:
     for team in sim.teams():
       var total = sim.hillTicks[team]
       for archived in sim.gameHill:

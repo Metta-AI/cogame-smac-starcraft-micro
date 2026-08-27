@@ -4421,10 +4421,22 @@ body[data-embed] #board { top: 0; height: 100%; }
     return false;
   }
 
+  // The momentum graph plots scanTeamLead, which under micro is the two ARMY
+  // HP pools rather than lives (one life per unit makes the inherited series
+  // an alive-count staircase). The inherited caption is retargeted here, from
+  // the appended block, so no inherited markup changes for it.
+  function renderMomentumLabel() {
+    var label = document.querySelector('#scrub .momentum-label');
+    if (label && label.textContent !== 'ARMY HP LEAD') {
+      label.textContent = 'ARMY HP LEAD';
+    }
+  }
+
   function smacFrame(s, ctx, jumped) {
     CTX = ctx;
     var m = s.micro;
     if (!m) return;
+    renderMomentumLabel();
     renderArmyBars(m);
     renderFocusRing(s);
     renderCaption(s);
