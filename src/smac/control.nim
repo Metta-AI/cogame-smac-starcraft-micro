@@ -331,8 +331,8 @@ proc microCentre*(sim: SimServer): tuple[x, y: int] =
     sy += sim.players[i].y + CollisionH div 2
     inc n
   if n == 0:
-    return (MapWidth div 2, MapHeight div 2)
-  (sx div n, sy div n)
+    return (x: MapWidth div 2, y: MapHeight div 2)
+  (x: sx div n, y: sy div n)
 
 proc livingEnemyNearest*(
   sim: SimServer, x, y: int
@@ -416,16 +416,16 @@ proc rangerPost*(
       px = clamp(ex + int(ux * float(standoff)), 0, MapWidth - 1)
       py = clamp(ey + int(uy * float(standoff)), 0, MapHeight - 1)
     if sim.canOccupy(px, py) and sim.paintPathClear(px, py, ex, ey):
-      return (px, py)
-  (ex, ey)
+      return (x: px, y: py)
+  (x: ex, y: ey)
 
 proc predictedCentre*(sim: SimServer, index, ticks: int): tuple[x, y: int] =
   ## Where a unit's centre will be `ticks` from now at its current velocity —
   ## integer lead, so a ranger's 5-tick windup is aimed where the target is
   ## going rather than where it was.
   let p = sim.players[index]
-  (p.x + CollisionW div 2 + p.velX * ticks div MotionScale,
-   p.y + CollisionH div 2 + p.velY * ticks div MotionScale)
+  (x: p.x + CollisionW div 2 + p.velX * ticks div MotionScale,
+   y: p.y + CollisionH div 2 + p.velY * ticks div MotionScale)
 
 proc goalFor*(
   ctl: ControlState, sim: SimServer, order: CogOrder, cogIndex: int
@@ -438,11 +438,11 @@ proc goalFor*(
     unit = sim.players[cogIndex]
     px = unit.x + CollisionW div 2
     py = unit.y + CollisionH div 2
-    target = (clamp(order.targetX, 0, MapWidth - 1),
-              clamp(order.targetY, 0, MapHeight - 1))
+    target: tuple[x, y: int] = (clamp(order.targetX, 0, MapWidth - 1),
+                                clamp(order.targetY, 0, MapHeight - 1))
     enemy = sim.resolveOrderEnemy(order, cogIndex)
   var
-    goal = target
+    goal: tuple[x, y: int] = target
     capped = false
   case order.intent
   of intFocus:
@@ -452,8 +452,8 @@ proc goalFor*(
       goal = sim.rangerPost(enemy, cogIndex)
       capped = true
     else:
-      goal = (sim.players[enemy].x + CollisionW div 2,
-              sim.players[enemy].y + CollisionH div 2)
+      goal = (x: sim.players[enemy].x + CollisionW div 2,
+              y: sim.players[enemy].y + CollisionH div 2)
       capped = true
   of intAttackMove:
     goal = target
@@ -462,8 +462,8 @@ proc goalFor*(
     if unit.role != urRanger:
       ## A blade reads `kite` as `focus`: it has no range to trade with.
       if enemy >= 0:
-        goal = (sim.players[enemy].x + CollisionW div 2,
-                sim.players[enemy].y + CollisionH div 2)
+        goal = (x: sim.players[enemy].x + CollisionW div 2,
+                y: sim.players[enemy].y + CollisionH div 2)
         capped = true
       else:
         goal = target
@@ -482,7 +482,7 @@ proc goalFor*(
           ## SHOOT AND SCOOT: the weapon is ready and the shot will land, so
           ## the unit stands still and fires. This is the ONE place in the
           ## design where a goal depends on the weapon's cooldown.
-          goal = (px, py)
+          goal = (x: px, y: py)
         else:
           goal = sim.standoffPoint(
             nx, ny, px, py, max(1, sim.config.kiteStandoff))
@@ -492,8 +492,8 @@ proc goalFor*(
     let ranger = weakestRanger(sim)
     if ranger < 0:
       if enemy >= 0:
-        goal = (sim.players[enemy].x + CollisionW div 2,
-                sim.players[enemy].y + CollisionH div 2)
+        goal = (x: sim.players[enemy].x + CollisionW div 2,
+                y: sim.players[enemy].y + CollisionH div 2)
         capped = true
       else:
         goal = target
@@ -513,8 +513,8 @@ proc goalFor*(
         capped = true
   of intRetreat:
     let zone = sim.captureZone(sim.players[cogIndex].team)
-    goal = (clamp(target.x, zone.xLo, zone.xHi),
-            clamp(target.y, zone.yLo, zone.yHi))
+    goal = (x: clamp(target.x, zone.xLo, zone.xHi),
+            y: clamp(target.y, zone.yLo, zone.yHi))
   of intRegroup:
     var
       sx = 0
@@ -526,14 +526,14 @@ proc goalFor*(
       sx += sim.players[i].x + CollisionW div 2
       sy += sim.players[i].y + CollisionH div 2
       inc n
-    goal = (if n == 0: target else: (sx div n, sy div n))
+    goal = (if n == 0: target else: (x: sx div n, y: sy div n))
   if capped:
     let cap = max(1, sim.config.chaseCapPx)
     let d = distSq(px, py, goal.x, goal.y)
     if d > cap * cap:
       let span = max(1, abs(goal.x - px) + abs(goal.y - py))
-      goal = (clamp(px + (goal.x - px) * cap div span, 0, MapWidth - 1),
-              clamp(py + (goal.y - py) * cap div span, 0, MapHeight - 1))
+      goal = (x: clamp(px + (goal.x - px) * cap div span, 0, MapWidth - 1),
+              y: clamp(py + (goal.y - py) * cap div span, 0, MapHeight - 1))
   goal
 
 proc compileMask*(
