@@ -58,7 +58,7 @@ suite "identity privacy":
     check results["role"][0].getStr() == "ranger"
     # and so is the broadcast roster.
     let frame = parseJson(sim.buildStateJson(
-      newJArray(), true, 1, sim.tickCount, false, true, -1, -1))
+      newJArray(), true, 1.0, sim.tickCount, false, true, -1, -1))
     var found = false
     for entry in frame["roster"]:
       if entry["name"].getStr() == Sentinel:

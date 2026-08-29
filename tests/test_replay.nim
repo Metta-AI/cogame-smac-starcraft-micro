@@ -1,8 +1,8 @@
 ## An end-to-end episode: a real replay, re-derived hash for hash, parsed
 ## strictly as UTF-8 by the forensic tool.
-import std/[json, os, osproc, unicode, unittest]
+import std/[json, os, osproc, strutils, unicode, unittest]
 import smac_helpers
-import smac/[replay_runtime, replays]
+import smac/[replay_runtime, replays, wire_constants]
 
 const Fixture = "tests/fixtures"
 
@@ -244,3 +244,33 @@ suite "replay":
                 "swarmDamage", "swarmCooldown", "aggroPx", "leashPx",
                 "retargetTicks", "enemyStuckTicks"]:
       check config.hasKey(key)
+
+  test "1/2x is a replay-only crawl the chrome reports as 0.5":
+    ## The fleet-wide 1/2x replay speed: command '5' selects
+    ## ReplayHalfSpeedIndex, the chrome shows 0.5, and the step budget spends
+    ## one tick every OTHER frame (halfPhase parity) outside lulls.
+    var replay = ReplayPlayer()
+    replay.speedIndex = 0
+    applySpeedCommand(replay.speedIndex, '5')
+    check replay.speedIndex == ReplayHalfSpeedIndex
+    check replay.replayDisplaySpeed() == 0.5
+    # The integer speed clamps to 1x, so the LIVE loop (which shares
+    # applySpeedCommand and steps playbackSpeed() ticks) can never be handed
+    # a fractional or negative budget.
+    check replay.replaySpeed() == 1
+    check playbackSpeed(ReplayHalfSpeedIndex) == 1
+    replay.skipLulls = false
+    replay.halfPhase = false
+    check replay.replayStepBudget(0) == 0
+    replay.halfPhase = true
+    check replay.replayStepBudget(0) == 1
+    # '+' leaves 1/2x for 1x; '-' floors at 1/2x instead of at 1x.
+    applySpeedCommand(replay.speedIndex, '+')
+    check replay.speedIndex == 0
+    applySpeedCommand(replay.speedIndex, '-')
+    check replay.speedIndex == ReplayHalfSpeedIndex
+    applySpeedCommand(replay.speedIndex, '-')
+    check replay.speedIndex == ReplayHalfSpeedIndex
+
+  test "the wire constants lead with the 1/2x speed the chips send '5' for":
+    check "window.SMAC_WIRE={speeds:[0.5,1,2,3,4,8,16]" in WireConstantsJs
