@@ -53,11 +53,13 @@ stay separate FILES so the CI float grep can read them on their own.
 
 ## Rules for changing things
 
-* **`client/chrome_common.js` is byte-for-byte the starter's.** Its sha256 is
-  pinned in `tests/test_viewer.nim`. Everything this game adds lives in the
-  appended block at the bottom of `client/replay_broadcast.html`, under the
-  banner comment. A from-scratch page that reuses the starter's ids is a
-  rewrite, not a fork.
+* **`client/chrome_common.js` is the starter's plus the fleet-wide replay
+  transport patch** (the `0.5x` speed chip, and `SMAC_WIRE` in place of the
+  inherited `CTF_WIRE` read, which never resolved here). Its sha256 and byte
+  length are pinned in `tests/test_viewer.nim`; nothing else in the file is
+  edited or reformatted. Everything this game adds lives in the appended block
+  at the bottom of `client/replay_broadcast.html`, under the banner comment. A
+  from-scratch page that reuses the starter's ids is a rewrite, not a fork.
 * **`client/broadcast_core.js` differs from the starter's in exactly one
   identifier** (`CTF_WIRE` -> `SMAC_WIRE`). The test asserts the count.
 * **The beat builder is `smacBeat`, never `markBeat`.** chrome_common.js hoists

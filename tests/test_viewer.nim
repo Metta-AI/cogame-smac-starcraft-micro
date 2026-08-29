@@ -4,8 +4,14 @@ import std/[os, osproc, strutils, unittest]
 
 const
   GameDir = currentSourcePath.parentDir.parentDir
-  StarterChromeSha =
-    "7ace7287e0d19bf0fddb2362c55e4d76dfb44adcd4fbc8d1743b0557ced72f7c"
+  ChromeCommonSha =
+    "71d5b2c8104ebcb2c79e620aa4edeae2756e689bda96efb4e8386b301f3e73c7"
+    ## coworld-ctf's `client/chrome_common.js` plus the fleet-wide replay
+    ## transport patch: the 0.5x speed chip and this game's own SMAC_WIRE
+    ## global (the inherited CTF_WIRE lookup never resolved here, so the
+    ## chips were built from the fallback literal instead of the engine's
+    ## PlaybackSpeeds).
+  ChromeCommonBytes = 40038
   BannerLine =
     "smac-starcraft-micro additions to the inherited coworld-ctf chrome"
   # The aliases chrome_common.js hoists into the page's closure. NOTHING in the
@@ -30,19 +36,35 @@ suite "viewer":
     inherited = page[0 ..< max(0, bannerAt)]
     appended = page[max(0, bannerAt) .. ^1]
 
-  test "chrome_common.js is byte-identical to the starter's copy":
-    # Not edited, not reformatted: everything this game adds lives in the
-    # appended block. The sha256 is the pin.
-    check chrome.len > 10_000
+  test "chrome_common.js is byte-identical to the pinned copy":
+    # The starter's file plus the two-line transport patch above, and nothing
+    # else: everything this game adds lives in the appended block of
+    # replay_broadcast.html. The sha256 + length are the pin.
+    check chrome.len == ChromeCommonBytes
     check "window.ChromeCommon" in chrome
     let previous = getCurrentDir()
     setCurrentDir(GameDir)
     try:
       let (shaOut, code) = execCmdEx("sha256sum client/chrome_common.js")
       check code == 0
-      check shaOut.split()[0] == StarterChromeSha
+      check shaOut.split()[0] == ChromeCommonSha
     finally:
       setCurrentDir(previous)
+
+  test "the replay transport patch is in the chrome and the league shell":
+    ## The fleet-wide 1/2x patch, pinned where it lives: the chips are built
+    ## in the shared chrome from the engine's speed list (SMAC_WIRE, which
+    ## this game actually emits — the inherited CTF_WIRE read never
+    ## resolved), and 0.5x sends command '5'. Space play/pause is bound on
+    ## BOTH shipped pages: the board handles its own keydown, the league
+    ## shell forwards it down the command channel because keydown never
+    ## crosses the iframe boundary.
+    check "window.SMAC_WIRE" in chrome
+    check "[0.5, 1, 2, 3, 4, 8, 16]" in chrome
+    check "0.5: '5'" in chrome
+    check "if (k === ' ') { ev.preventDefault(); togglePlay(); }" in page
+    check "else if(ev.key===' '){ ev.preventDefault(); sendCmd(' '); }" in
+      read("client/league_replayer.html")
 
   test "broadcast_core.js differs from the starter's in ONE identifier":
     check "window.SMAC_WIRE" in core
@@ -130,14 +152,10 @@ suite "viewer":
     check "function smacBeat(" in appended
 
   test "no ctf_ or CTF_ identifier survives in client, replay-viewer or src":
-    ## chrome_common.js is EXCLUDED: it is pinned byte-for-byte to the
-    ## starter's copy above, and its one `window.CTF_WIRE` read falls back to
-    ## the same defaults the engine ships (speeds and fps), so the pin and this
-    ## grep are both satisfied by leaving it alone.
+    ## chrome_common.js is swept too, now that its one inherited
+    ## `window.CTF_WIRE` read reads this game's SMAC_WIRE.
     for dir in ["client", "replay-viewer", "src"]:
       for path in walkDirRec(GameDir / dir):
-        if path.endsWith("chrome_common.js"):
-          continue
         if path.splitFile().ext notin [".js", ".nim", ".nims", ".html"]:
           continue
         let body = readFile(path)
