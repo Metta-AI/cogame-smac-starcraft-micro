@@ -96,6 +96,10 @@ when isMainModule:
             engine.directives[seat] = parsed
             engine.haveDirective[seat] = true
           engine.snapshotTurn(sim)
+          for seat in 0 ..< config.numAgents:
+            for order in engine.directives[seat].orders:
+              if order.say.len > 0:
+                discard sim.applyShout(order.cogIndex, order.say)
         for seat in 0 ..< config.numAgents:
           if engine.haveDirective[seat]:
             let mask = engine.ctl.compileMask(sim,
