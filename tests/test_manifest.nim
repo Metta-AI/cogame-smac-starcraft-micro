@@ -109,12 +109,12 @@ suite "manifest":
       "{{SMAC_STARCRAFT_MICRO_IMAGE}}"
     check m["player"][0]["image"].getStr() == "{{SMAC_STARCRAFT_MICRO_IMAGE}}"
 
-  test "game.name equals the secret namespace":
+  test "hosted inference needs no provider secret":
     let m = manifest()
     let name = m["game"]["name"].getStr()
     check name == "smac-starcraft-micro"
-    check m["game"]["runnable"]["env"]["ANTHROPIC_API_KEY_URI"].getStr() ==
-      "secret://coworld/" & name & "/anthropic_api_key"
+    doAssert m{"game"}{"runnable"}{"env"}{"ANTHROPIC_API_KEY_URI"}.isNil,
+      "hosted LLM uses the platform sidecar without provider secrets"
 
   test "every variant's wallClockBudgetSeconds fits inside 60% of 1200 s":
     let m = manifest()
