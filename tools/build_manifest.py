@@ -271,14 +271,7 @@ manifest = {
             "type": "game",
             "image": IMAGE,
             "run": ["/bin/smac-starcraft-micro"],
-            "env": {
-                # Without this the hosted game container never sees the coworld
-                # secret and every league episode silently plays scripted
-                # (the hive scar, 2026-08-23). The namespace must equal
-                # game.name EXACTLY (cooperative-hunting, 2026-08-25).
-                "ANTHROPIC_API_KEY_URI":
-                    "secret://coworld/smac-starcraft-micro/anthropic_api_key",
-            },
+            "env": {},
             "source_url": SOURCE,
         },
         "config_schema": CONFIG_SCHEMA,
