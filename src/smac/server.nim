@@ -5,7 +5,7 @@ import
   bitworld/runtime,
   curly, mummy,
   sim, global, replays, broadcast, replay_runtime, events, wire_constants,
-  control, directives, baselines, decide, prompts, evidence
+  control, directives, baselines, decide, prompts
 
 when defined(posix):
   from std/posix import SHUT_RDWR, shutdown
@@ -1252,11 +1252,6 @@ proc runServerLoop*(
   let wording = promptSelection(
     if runtimeConfig.config.len > 0: parseJson(runtimeConfig.config)
     else: newJObject())
-  let trace = getEnv("SMAC_HOST_TRACE_PATH")
-  if trace.len > 0:
-    writePrivate(trace, $(%*{"event_type": "episode_started",
-      "source_revision": getEnv("SMAC_SOURCE_REVISION"),
-      "prompt_configuration": wording.selectionMetadata()}) & "\n")
   if saveReplayPath.len > 0 and loadReplayPath.len > 0:
     raise newException(ReplayError, "Cannot save and load a replay together")
   var replayLoaded = loadReplayPath.len > 0
@@ -2280,9 +2275,6 @@ proc runServerLoop*(
       finishProfileTrace()
 
     if quitAfterFrame:
-      if trace.len > 0:
-        appendPrivate(trace, %*{"event_type": "episode_finished",
-          "results": parseJson(sim.playerResultsJson())})
       if squadMode:
         # The `result` control record: the full results document, written once
         # into the replay chat stream at episode end (docs/PROTOCOL.md record

@@ -149,20 +149,10 @@ jobs:
           done
           exit "${fail}"
 
-      - name: Complete prompt-diversity games and private source gates
+      - name: Complete wording games
         run: |
           nim c -d:release --parallelBuild:1 --path:src -o:/tmp/smac-bridge tools/train_bridge.nim
-          nim c -d:release --parallelBuild:1 --path:src -o:/tmp/smac-export tools/export_posttrain.nim
           python3 tools/test_prompt_games.py /tmp/smac-bridge
-          python3 tools/test_source_prompts.py /tmp/smac-export /tmp/smac-source-panel
-
-      - name: Native inference after rate-limit spacing, retry, and fallback
-        run: |
-          nim c -d:release --parallelBuild:1 --path:src -o:/tmp/smac-game src/smac_starcraft_micro.nim
-          nim c -d:release --parallelBuild:1 --path:src -o:/tmp/smac-player src/smac_starcraft_micro_player.nim
-          for mode in accepted retry fallback; do
-            python3 tools/test_native_prompts.py /tmp/smac-game /tmp/smac-player "/tmp/smac-native-$mode" --wording mixed --mode "$mode"
-          done
 
       # ------------------------------------------------------------------
       # The worst-case TEXT fixture (acceptance checklist item 15). Every

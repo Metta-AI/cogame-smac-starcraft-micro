@@ -16,7 +16,7 @@ type
     seed*: int
 
 const
-  PromptBankVersion* = "smac-starcraft-micro-rules-v1"
+  PromptBankVersion* = "smac-starcraft-micro-rules-v2"
 
 proc promptSelection*(node: JsonNode): PromptSelection =
   if node.kind != JObject:
