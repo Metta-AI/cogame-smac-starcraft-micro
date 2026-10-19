@@ -75,14 +75,14 @@ suite "manifest":
       check node["value"].getStr().len > 0
     check m["game"]["docs"]["readme"]["type"].getStr() == "text"
     check m["game"]["docs"]["readme"]["value"].getStr().len > 0
-    check m["game"]["docs"]["pages"].len == 4
+    check m["game"]["docs"]["pages"].len == 5
     var ids: HashSet[string]
     for page in m["game"]["docs"]["pages"]:
       ids.incl(page["id"].getStr())
       check page["title"].getStr().len > 0
       check page["content"]["type"].getStr() == "text"
       check page["content"]["value"].getStr().len > 0
-    check ids == ["rules", "scenarios", "protocol", "commanding"].toHashSet()
+    check ids == ["rules", "scenarios", "protocol", "commanding", "training"].toHashSet()
 
   test "the platform's own shape rules":
     let m = manifest()
