@@ -23,7 +23,8 @@ import
   std/[json, os, strutils, unicode],
   bitworld/runtime,
   curly,
-  sim_types, directives
+  crunchy,
+  sim_types, directives, prompts
 
 const
   AnthropicUrl = "https://api.anthropic.com/v1/messages"
@@ -65,7 +66,7 @@ proc resolveApiKey(): string =
   try:
     result = readCogameUri(uri, "ANTHROPIC_API_KEY_URI").strip()
   except CatchableError as error:
-    echo "smac llm: failed to fetch ANTHROPIC_API_KEY_URI: ", error.msg
+    stderr.writeLine "smac llm: failed to fetch ANTHROPIC_API_KEY_URI: ", error.msg
     result = ""
 
 proc bedrockModelIds(): seq[string] =
@@ -92,7 +93,7 @@ proc tryNextBedrockModel(client: LlmClient, why: string): bool =
       client.bedrockModel + 1 >= client.bedrockModels.len:
     return false
   client.bedrockModel.inc
-  echo "smac llm: ", client.bedrockModels[client.bedrockModel - 1],
+  stderr.writeLine "smac llm: ", client.bedrockModels[client.bedrockModel - 1],
     " unusable (", why, "); falling back to ",
     client.bedrockModels[client.bedrockModel]
   true
@@ -127,20 +128,20 @@ proc newLlmClient*(config: GameConfig): LlmClient =
     result.bedrockModels = bedrockModelIds()
     result.bedrockToken = bedrockToken
     result.curl = newCurly()
-    echo "smac llm: bedrock transport, model ",
+    stderr.writeLine "smac llm: bedrock transport, model ",
       result.bedrockModels[result.bedrockModel]
     return
   result.apiKey = resolveApiKey()
   if result.apiKey.len > 0:
     result.transport = ltAnthropic
     result.curl = newCurly()
-    echo "smac llm: anthropic transport, model ", result.model
+    stderr.writeLine "smac llm: anthropic transport, model ", result.model
   else:
     result.transport = ltNone
     result.disabled = true
     ## The exact phrase phase 60 greps the GAME log for, alongside "falling
     ## back" below: "LLM provider is unavailable".
-    echo "smac llm: no credentials — the LLM provider is unavailable; ",
+    stderr.writeLine "smac llm: no credentials — the LLM provider is unavailable; ",
       "every turn is falling back to the scripted layer"
 
 proc requestFor*(
@@ -218,7 +219,7 @@ proc textOf*(
     raise newException(LlmError, "reply cut off at max_tokens before any " &
       "JSON: " & result.truncateRunes(160).replace("\n", " "))
 
-const SystemPrompt* = """
+const CanonicalSystemPrompt* = """
 You command ONE unit in a five-unit squad fighting a scripted enemy army in a
 top-down arena 1235 by 659 pixels. Your whole squad shares ONE score: how much
 of the enemy army you destroy, whether you wipe it out, and how much of your
@@ -263,6 +264,23 @@ ranger, between it and the nearest enemy; retreat = walk to `target` and do not
 fire; regroup = move to the middle of your surviving squadmates.
 `face` biases your aim. `say` is SHOUTED and every nearby squadmate hears it.
 """
+
+proc systemPrompt*(selection: PromptSelection): string =
+  let introduction = case selection.selectedVariant
+    of pvCanonical: "You command ONE unit in a five-unit squad fighting a scripted enemy army in a\ntop-down arena 1235 by 659 pixels. "
+    of pvPlain: "You control one of five squad units against a scripted enemy army. The top-down\narena measures 1235 by 659 pixels. "
+    of pvNumbered: "1. You command one unit. 2. Your squad has five units. 3. The opponent is a\nscripted army. 4. The top-down arena is 1235 by 659 pixels. "
+    of pvQuestions: "What do you command? One unit in a five-unit squad. Who do you fight? A scripted\nenemy army. Where? A top-down arena measuring 1235 by 659 pixels. "
+    of pvReordered: "In a top-down arena 1235 by 659 pixels, a five-unit squad fights a scripted\nenemy army. You command one squad unit. "
+    of pvHeldoutBriefing: "Command briefing: take charge of one unit of a five-unit squad opposing a\nscripted enemy army in a 1235 by 659 pixel top-down arena. "
+    of pvHeldoutReference: "Arena: top-down, 1235 by 659 pixels. Opponent: scripted enemy army.\nYour squad: five units. Your command: one unit. "
+    of pvMixed: raise newException(ValueError, "mixed wording must be resolved")
+  introduction & CanonicalSystemPrompt[CanonicalSystemPrompt.find("Your whole squad") .. ^1]
+
+proc promptMetadata*(selection: PromptSelection, system, user: string): JsonNode =
+  result = selection.selectionMetadata()
+  result["system_sha256"] = %sha256(system).toHex
+  result["user_sha256"] = %sha256(user).toHex
 
 proc operatorBlock*(prompt: string): string =
   ## The seat's own PLAYER_PROMPT, under a heading that tells the model how

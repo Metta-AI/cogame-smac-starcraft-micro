@@ -72,6 +72,10 @@ coworld upload-policy coworld-smac-starcraft-micro \
 
 ## Four scenarios
 
+Game-owned prompt diversity is configured with `promptVariant` and `promptSeed`.
+Five training introductions and two held-out introductions preserve the rules.
+See [TRAINING.md](TRAINING.md) for selection, private evidence, and complete-game evaluation.
+
 | id | squad | enemy army | enemy pool |
 |---|---|---|---|
 | `default` | 2 rangers, 3 blades | 2 rangers, 3 blades | 480 |

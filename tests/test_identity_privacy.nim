@@ -22,7 +22,7 @@ suite "identity privacy":
     var engine = initDecisionEngine(sim)
     let user = userMessage("play well", engine.seatViewJson(sim, 0, 0, 12))
     check Sentinel notin user
-    check Sentinel notin SystemPrompt
+    check Sentinel notin CanonicalSystemPrompt
     # And the operator's own prompt is never echoed into a record.
     check "play well" in user
 

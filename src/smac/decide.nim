@@ -21,7 +21,7 @@
 import
   std/[json, math, monotimes, os, strutils, times],
   curly,
-  sim, control, directives, baselines, llm
+  sim, control, directives, baselines, llm, prompts, evidence
 
 type
   SeatPolicy* = object
@@ -34,6 +34,7 @@ type
     registered*: bool
 
   DecisionEngine* = object
+    promptSelection*: PromptSelection
     client*: LlmClient
     ctl*: ControlState
     seats*: seq[SeatPolicy]
@@ -396,6 +397,14 @@ proc turn*(
     battle = sim.gameIndex + 1
     budget = initDuration(milliseconds = max(1, sim.config.turnBudgetMs))
     turnStart = getMonoTime()
+    trace = getEnv("SMAC_HOST_TRACE_PATH")
+  var attempts = newSeq[JsonNode](engine.seats.len)
+  var selected = newSeq[string](engine.seats.len)
+  var observations = newSeq[string](engine.seats.len)
+  for seat in 0 ..< engine.seats.len:
+    observations[seat] = engine.seatViewJson(sim, seat, turnIndex, turnsPerBattle)
+    if trace.len > 0:
+      attempts[seat] = newJArray()
   ## Throttle state is PER TURN: a daily-token 429 on turn k says nothing
   ## about turn k+1 (the sidecar's window may have rolled), so the flag is
   ## cleared here and only suppresses this turn's retry.
@@ -475,13 +484,13 @@ proc turn*(
       if attempt == 0: sim.config.attempt1Ms else: sim.config.retryMs
     var batch: RequestBatch
     for seat in open:
-      var user = engine.seatViewJson(sim, seat, turnIndex, turnsPerBattle)
+      var user = observations[seat]
       if attempt > 0:
         user.add("\n\nYour previous reply was not usable. Reply with ONLY " &
           "the JSON object described above, starting with '{', with exactly " &
           "one \"cogs\" entry — your own unit.")
       let request = engine.client.requestFor(
-        SystemPrompt, userMessage(engine.seats[seat].prompt, user), seat)
+        systemPrompt(engine.promptSelection), userMessage(engine.seats[seat].prompt, user), seat)
       batch.post(request.url, request.headers, request.body, $seat)
     let started = getMonoTime()
     # curly hands the deadline to CURLOPT_TIMEOUT, whose granularity is WHOLE
@@ -499,10 +508,28 @@ proc turn*(
     var stillOpen: seq[int]
     for position, seat in open:
       var cause = "parse_error"
+      var evidenceRow: JsonNode
+      if trace.len > 0:
+        let body = parseJson(batch[position].body)
+        let system = body["system"].getStr()
+        let user = body["messages"][0]["content"].getStr()
+        var headers = newJObject()
+        for (key, value) in responses[position].response.headers:
+          headers[key] = %value
+        evidenceRow = %*{
+          "attempt_id": $battle & "-" & $turnIndex & "-" & $seat & "-" & $attempt,
+          "request": {"url": batch[position].url, "body": body},
+          "prompt": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+          "prompt_configuration": promptMetadata(engine.promptSelection, system, user),
+          "raw_response": responses[position].response.body,
+          "response_headers": headers, "http_status": responses[position].response.code,
+          "transport_error": responses[position].error, "response": "",
+          "parsed_action": newJNull(), "accepted": false, "failure": ""}
       try:
         let text = engine.client.textOf(
           responses[position].response, responses[position].error,
           batch[position].url)
+        if trace.len > 0: evidenceRow["response"] = %text
         let commanded = sim.commandedCogs(seat)
         var ids: seq[string]
         for cogIndex in commanded:
@@ -547,12 +574,19 @@ proc turn*(
         engine.repairMissingOrders(sim, seat, directive)
         engine.directives[seat] = directive
         engine.haveDirective[seat] = true
+        if trace.len > 0:
+          let record = directive.directiveRecord(battle, turnIndex, seat,
+            sim.aliasOfCog(seat), roleText(sim.config.roleOfCog(seat)))
+          evidenceRow["parsed_action"] = %*{"note": record["note"], "cogs": record["cogs"]}
+          evidenceRow["accepted"] = %true
+          selected[seat] = evidenceRow["attempt_id"].getStr()
         if not namedCog:
           echo "smac llm: seat ", seat,
             " repaired: reply named no commanded cog; kept ",
             (if hadPrevious: "last turn's directive"
              else: "focusfire's directive"), " on turn ", turnIndex
       except CatchableError as error:
+        if trace.len > 0: evidenceRow["failure"] = %error.msg
         if responses[position].error.len > 0:
           cause = (if "timeout" in responses[position].error.toLowerAscii():
                      "timeout" else: "transport_error")
@@ -573,6 +607,7 @@ proc turn*(
           (if attempt == 0: " failed, will retry: "
            else: " failed, no attempt left: "), error.msg
         stillOpen.add(seat)
+      if trace.len > 0: attempts[seat].add(evidenceRow)
     open = stillOpen
     inc attempt
     if engine.client.throttled and open.len > 0:
@@ -601,3 +636,17 @@ proc turn*(
     ## "falling back" is the phrase phase 60 greps the GAME log for.
     echo "smac llm: seat ", seat, " falling back to focusfire (", cause,
       ") on turn ", turnIndex
+
+  if trace.len > 0:
+    for seat in 0 ..< engine.seats.len:
+      let record = engine.directives[seat].directiveRecord(battle, turnIndex, seat,
+        sim.aliasOfCog(seat), roleText(sim.config.roleOfCog(seat)))
+      appendPrivate(trace, %*{"event_type": "host_decision",
+        "battle": battle, "turn": turnIndex, "seat": seat,
+        "prompt_configuration": engine.promptSelection.selectionMetadata(),
+        "observation": parseJson(observations[seat]), "attempts": attempts[seat],
+        "selected_attempt_id": selected[seat],
+        "action_origin": (if selected[seat].len > 0: "llm"
+          elif engine.seats[seat].isLlm: "scripted-focusfire"
+          else: "scripted-" & $engine.seats[seat].baseline),
+        "executed_action": {"note": record["note"], "cogs": record["cogs"]}})

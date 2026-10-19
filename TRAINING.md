@@ -1,37 +1,61 @@
-# Metta post-training data
+# Prompt diversity and post-training candidates
 
-The native simulator and published `focusfire` policy can export supervised
-examples for all four certified variants:
+The native host and text bridge use five training introductions: `canonical`,
+`plain`, `numbered`, `questions`, and `reordered`. `heldout-briefing` and
+`heldout-reference` are evaluation-only. All seven preserve the rules, numeric
+constants, strategy guidance, operator instructions, observations, and JSON grammar.
+
+Set `promptVariant` in the game configuration. `mixed` requires an explicit
+nonnegative `promptSeed` and selects `promptSeed % 5`. Selection stays fixed
+through all three battles and never consumes the simulation's random stream.
+Omitting the selection preserves the original canonical system message.
+
+The selection belongs to the decision engine, outside the binary simulator and
+replay format. Each turn freezes all five observations before installing any
+orders, including when an individual seat retries.
+
+## Complete-game text bridge
 
 ```sh
 nimby sync nimby.lock
-nim r -d:release --path:src tools/export_posttrain.nim /tmp/smac-default 10 1 default
-nim r -d:release --path:src tools/export_posttrain.nim /tmp/smac-outnumbered 10 1 outnumbered
-nim r -d:release --path:src tools/export_posttrain.nim /tmp/smac-corridor 10 1 corridor
-nim r -d:release --path:src tools/export_posttrain.nim /tmp/smac-heavy 10 1 heavy
+nim c -d:release --parallelBuild:1 --path:src -o:smac-train-bridge tools/train_bridge.nim
+./smac-train-bridge coworld_manifest_template.json default
 ```
 
-Each run reads its manifest variant config and plays complete seeded,
-five-seat, three-battle episodes. The exporter records the hosted system
-prompt, each seat's battle view, and a `focusfire` action accepted by the
-game's reply parser. Parsed actions drive combat. Splits are by episode seed.
-The manifest records source revision, variant, score, wins, and row counts.
-Existing output directories are never overwritten.
+The JSONL protocol accepts `reset`, `teacher`, and `step`. A reset specifies
+`players: 5`, a string `seed`, optional prompt selection, and `split`
+(`train`, `validation`, or `test`). Training rejects held-out introductions.
+Decisions include messages, prompt hashes, a semantic view, and the action schema.
+All five actions are collected before the native controller advances the game.
+Terminal responses report all five scores after the complete three-battle episode.
 
-Train any output with Metta post-training:
+## Private source candidates
 
 ```sh
-nix develop -c uv run --package metta-posttrain --extra train \
-  python -m metta_posttrain.train --dataset /tmp/smac-default \
-  --output /tmp/smac-adapter --model Qwen/Qwen3-0.6B \
-  --max-steps 100 --max-length 4096
+nim c -d:release --parallelBuild:1 --path:src -o:smac-export tools/export_posttrain.nim
+./smac-export /tmp/smac-default-candidates 10 1 default mixed 7
 ```
 
-In local 10-episode exports, default produced 535 training and 145 validation
-examples, outnumbered 610 and 155, corridor 250 and 60, heavy 535 and 130.
-All 2,390 examples fit a 4096-token model context. One CPU optimizer update
-reduced held-out loss from 5.5603 to 5.4867, 5.4878 to 5.4187, 5.4929 to
-5.4151, and 5.5253 to 5.4487 respectively. The teacher won 17/30, 0/30,
-30/30, and 0/30 battles, so outnumbered and heavy need a stronger teacher for
-competitive play. These exports prove data and training interfaces, not
-improved league performance.
+Supported variants are `default`, `outnumbered`, `corridor`, and `heavy`.
+Export requires a clean committed checkout and a new output directory. It writes
+private `trajectories.jsonl` candidates and a manifest, never ready-to-train splits.
+Records identify the scripted `focusfire` teacher, exact messages and hashes,
+parsed and installed actions, source revision, and complete episode outcomes.
+Scenario families group the same seed across every game and wording variant.
+The shared Coworld review and split gates own admission to training.
+
+## Native evidence and evaluation
+
+Set `SMAC_HOST_TRACE_PATH` to a new private file and `SMAC_SOURCE_REVISION` to the
+tested source commit. The host records actual request bodies, response headers,
+raw replies, parsed actions, retries, installed orders, and final results.
+These records include operator instructions and must remain private. Public replay
+and results do not acquire the trace or prompt selection.
+
+Run `python3 tools/test_prompt_games.py ./smac-train-bridge` for complete-game
+wording equivalence and simultaneous-information checks. Model experiments should
+pair scenario seeds, seats, budgets, and training steps; compare canonical-only
+training against mixed training on both seen and held-out wording. Report score,
+completion, parse, retry, and fallback rates without discarding failed episodes.
+Deterministic teacher checks establish interface correctness, not improved model
+play or resistance to training collapse.
