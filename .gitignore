@@ -1,5 +1,6 @@
 # Build outputs
 nimcache/
+__pycache__/
 nim.cfg
 dist/
 replay-viewer/dist/

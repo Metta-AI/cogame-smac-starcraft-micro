@@ -18,7 +18,9 @@ proc action(directive: SquadDirective, sim: SimServer, seat, turn: int): JsonNod
 when isMainModule:
   let args = commandLineParams()
   if args.len != 2: quit("usage: smac-train-bridge MANIFEST VARIANT", 1)
-  let manifest = parseFile(args[0])
+  let manifestPath = absolutePath(args[0])
+  let manifest = parseFile(manifestPath)
+  setCurrentDir(manifestPath.parentDir())
   var variantConfig: JsonNode
   for entry in manifest["variants"]:
     if entry["id"].getStr() == args[1]: variantConfig = entry["game_config"]
