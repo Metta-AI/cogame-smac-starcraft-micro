@@ -14,6 +14,11 @@ The selection belongs to the decision engine, outside the binary simulator and
 replay format. Each turn freezes all five observations before installing any
 orders, including when an individual seat retries.
 
+The rate-limit spacing runs before the inference budget starts. Previously the
+12-second spacing consumed the entire 10-second budget after the first turn,
+preventing further requests. The spacing, request deadlines, and episode budget
+are unchanged.
+
 ## Complete-game text bridge
 
 ```sh

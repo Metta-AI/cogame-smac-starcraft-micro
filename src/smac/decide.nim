@@ -396,7 +396,6 @@ proc turn*(
   let
     battle = sim.gameIndex + 1
     budget = initDuration(milliseconds = max(1, sim.config.turnBudgetMs))
-    turnStart = getMonoTime()
     trace = getEnv("SMAC_HOST_TRACE_PATH")
   var attempts = newSeq[JsonNode](engine.seats.len)
   var selected = newSeq[string](engine.seats.len)
@@ -470,6 +469,9 @@ proc turn*(
     engine.batchStarted = true
 
   # --- up to two PARALLEL batches ------------------------------------------
+  # Rate-limit spacing is outside the request budget. The published spacing
+  # exceeds that budget; charging the wait would suppress every later call.
+  let turnStart = getMonoTime()
   var attempt = 0
   while open.len > 0 and attempt < 2:
     if engine.client.disabled:

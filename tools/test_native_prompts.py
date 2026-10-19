@@ -160,7 +160,7 @@ def main() -> None:
         for row in decisions:
             selected = "reordered" if args.wording == "mixed" else args.wording
             assert row["prompt_configuration"]["variant"] == selected
-            assert len(row["attempts"]) <= (2 if args.mode == "retry" else 1)
+            assert len(row["attempts"]) == (2 if args.mode == "retry" else 1)
             key = (row["battle"], row["turn"])
             if key != current_turn:
                 previous_notes.update(pending_notes)
@@ -191,12 +191,12 @@ def main() -> None:
                 for seat in range(5):
                     assert (f"PRIVATE-STRATEGY-{seat}:" in user) == (seat == row["seat"])
                 assert attempt["accepted"] == (args.mode == "accepted" or args.mode == "retry" and index == 1)
-            if row["selected_attempt_id"]:
-                assert args.mode != "fallback" and row["action_origin"] == "llm"
+            if args.mode != "fallback":
+                assert row["selected_attempt_id"] and row["action_origin"] == "llm"
                 assert row["selected_attempt_id"] == row["attempts"][-1]["attempt_id"]
                 assert row["executed_action"] == row["attempts"][-1]["parsed_action"]
             else:
-                assert row["action_origin"] == "scripted-focusfire"
+                assert not row["selected_attempt_id"] and row["action_origin"] == "scripted-focusfire"
         assert used == requests.keys() and used
         if args.mode != "fallback":
             assert any(row["selected_attempt_id"] for row in decisions)
