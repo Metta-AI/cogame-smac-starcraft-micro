@@ -99,7 +99,7 @@ when isMainModule:
             let user = userMessage(OperatorPrompt, view)
             rows.add($(%*{
               "episode_id": "smac-starcraft-micro-" & variant & "-" & $seed & "-" &
-                $selection.selectedVariant & "-" & $selection.seed,
+                $selection.variant & "-" & $selection.selectedVariant & "-" & $selection.seed,
               "seed": "smac-starcraft-micro-" & $seed,
               "scenario_family": "smac-starcraft-micro-" & $seed,
               "prompt_template": promptMetadata(selection, system, user),

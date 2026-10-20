@@ -36,7 +36,7 @@ Exports use the native simulator, focusfire teacher, and command parser.
 They write `train.jsonl`, `validation.jsonl`, and `manifest.json`. Every fifth
 scenario seed belongs to validation. Mixed wording cycles within each split,
 so training receives all five presentations. Scenario families group the same
-seed across variants. Episode IDs include selected wording and prompt seed,
+seed across variants. Episode IDs include requested selection, resolved wording, and prompt seed,
 so matched exports remain distinguishable. Rows retain exact message hashes; all five source views
 are frozen before orders are installed. Existing output directories are rejected.
 Held-out wording cannot enter training exports.
