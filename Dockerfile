@@ -36,12 +36,12 @@ RUN nimby --global sync nimby.lock
 
 COPY . .
 ARG NimFlags="-d:release -d:useMalloc --opt:speed --stackTrace:on"
-RUN nim c \
+RUN nim c --parallelBuild:1 \
   $NimFlags \
   --nimcache:/tmp/smac-nimcache \
   --out:smac-starcraft-micro \
   src/smac_starcraft_micro.nim && \
-  nim c \
+  nim c --parallelBuild:1 \
   $NimFlags \
   --nimcache:/tmp/smac-player-nimcache \
   --out:smac-starcraft-micro-player \

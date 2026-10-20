@@ -149,6 +149,11 @@ jobs:
           done
           exit "${fail}"
 
+      - name: Complete wording games
+        run: |
+          nim c -d:release --parallelBuild:1 --path:src -o:/tmp/smac-bridge tools/train_bridge.nim
+          python3 tools/test_prompt_games.py /tmp/smac-bridge
+
       # ------------------------------------------------------------------
       # The worst-case TEXT fixture (acceptance checklist item 15). Every
       # replay CI can produce carries zero model text -- docker_smoke.sh runs

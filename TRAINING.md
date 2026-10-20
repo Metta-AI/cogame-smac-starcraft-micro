@@ -1,37 +1,47 @@
-# Metta post-training data
+# Prompt diversity and training
 
-The native simulator and published `focusfire` policy can export supervised
-examples for all four certified variants:
+The `smac-starcraft-micro-rules-v2` bank provides five training presentations:
+`canonical`, `plain`, `numbered`, `questions`, and `reordered`.
+`heldout-briefing` and `heldout-reference` are evaluation-only.
+Scoring, control, and visibility explanations vary. Numeric rules, strategy
+guidance, operator instructions, and command syntax remain fixed.
+
+All presentations correct the original claim that a ranger dies after two
+seconds of melee contact: a blade takes about 7.5 seconds against a full-health
+ranger. The canonical message otherwise remains unchanged.
+
+Set `promptVariant` in game configuration. `mixed` requires a nonnegative
+`promptSeed`, choosing `promptSeed % 5` once for all three battles without
+consuming simulation randomness. Selection belongs to the decision engine,
+outside the binary simulator and replay format.
+
+Rate-limit spacing precedes the inference budget. The published 12-second
+spacing otherwise exhausts the 10-second request budget before subsequent
+turns can request decisions. Spacing, deadlines, and episode budgets are unchanged.
+
+## Collection and evaluation
 
 ```sh
-nimby sync nimby.lock
-nim r -d:release --path:src tools/export_posttrain.nim /tmp/smac-default 10 1 default
-nim r -d:release --path:src tools/export_posttrain.nim /tmp/smac-outnumbered 10 1 outnumbered
-nim r -d:release --path:src tools/export_posttrain.nim /tmp/smac-corridor 10 1 corridor
-nim r -d:release --path:src tools/export_posttrain.nim /tmp/smac-heavy 10 1 heavy
+nim c -d:release --parallelBuild:1 --path:src -o:/tmp/smac-bridge tools/train_bridge.nim
+python3 tools/test_prompt_games.py /tmp/smac-bridge
+nim r --path:src tools/export_posttrain.nim /tmp/smac-data 10 1 default mixed 0
 ```
 
-Each run reads its manifest variant config and plays complete seeded,
-five-seat, three-battle episodes. The exporter records the hosted system
-prompt, each seat's battle view, and a `focusfire` action accepted by the
-game's reply parser. Parsed actions drive combat. Splits are by episode seed.
-The manifest records source revision, variant, score, wins, and row counts.
-Existing output directories are never overwritten.
+The persistent JSONL bridge command is `["/tmp/smac-bridge", "<source>/coworld_manifest_template.json", "default"]`
+with five players. Other variants are `outnumbered`, `corridor`, and `heavy`.
+Held-out resets require `split: "validation"` or `split: "test"`.
+The bridge freezes all five observations before installing decisions.
 
-Train any output with Metta post-training:
+Exports use the native simulator, focusfire teacher, and command parser.
+They write `train.jsonl`, `validation.jsonl`, and `manifest.json`. Every fifth
+scenario seed belongs to validation. Mixed wording cycles within each split,
+so training receives all five presentations. Scenario families group the same
+seed across variants. Episode IDs include requested selection, resolved wording, and prompt seed,
+so matched exports remain distinguishable. Rows retain exact message hashes; all five source views
+are frozen before orders are installed. Existing output directories are rejected.
+Held-out wording cannot enter training exports.
 
-```sh
-nix develop -c uv run --package metta-posttrain --extra train \
-  python -m metta_posttrain.train --dataset /tmp/smac-default \
-  --output /tmp/smac-adapter --model Qwen/Qwen3-0.6B \
-  --max-steps 100 --max-length 4096
-```
-
-In local 10-episode exports, default produced 535 training and 145 validation
-examples, outnumbered 610 and 155, corridor 250 and 60, heavy 535 and 130.
-All 2,390 examples fit a 4096-token model context. One CPU optimizer update
-reduced held-out loss from 5.5603 to 5.4867, 5.4878 to 5.4187, 5.4929 to
-5.4151, and 5.5253 to 5.4487 respectively. The teacher won 17/30, 0/30,
-30/30, and 0/30 battles, so outnumbered and heavy need a stronger teacher for
-competitive play. These exports prove data and training interfaces, not
-improved league performance.
+These are scripted imitation examples. Deterministic complete-game comparisons
+check mechanics and provenance, not learned robustness. Match game seeds,
+policies, and inference settings in learning comparisons; report failures and
+fallbacks, and reserve held-out wording until training choices are frozen.

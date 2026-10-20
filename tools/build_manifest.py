@@ -79,6 +79,10 @@ TUNING = {
 }
 
 SCALARS = {
+    "promptVariant": {"type": "string", "default": "canonical", "enum": [
+        "canonical", "plain", "numbered", "questions", "reordered",
+        "heldout-briefing", "heldout-reference", "mixed"]},
+    "promptSeed": {"type": "integer", "minimum": 0},
     "seed": {"type": "integer", "default": 679961},
     "num_agents": {"type": "integer", "minimum": 5, "maximum": 5, "default": 5},
     "minPlayers": {"type": "integer", "minimum": 5, "maximum": 5, "default": 5},
@@ -283,6 +287,7 @@ manifest = {
         "docs": {
             "readme": text("README.md"),
             "pages": [
+                {"id": "training", "title": "Prompt diversity and training", "content": text("TRAINING.md")},
                 {"id": "rules", "title": "Rules", "content": text("docs/RULES.md")},
                 {"id": "scenarios",
                  "title": "Scenarios and their SMAC lineage",

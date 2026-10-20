@@ -3,19 +3,25 @@
 
 import std/[json, os, osproc, strutils]
 import bitworld/spriteprotocol
-import smac/[sim, roster, units, control, directives, decide, llm]
+import smac/[sim, roster, units, control, directives, decide, llm, prompts]
 
 const OperatorPrompt = "Coordinate your unit using only its battle view."
 const Variants = ["default", "outnumbered", "corridor", "heavy"]
 
 when isMainModule:
   let args = commandLineParams()
-  if args.len notin 2 .. 4:
-    quit("usage: export_posttrain OUTPUT EPISODES [FIRST_SEED] [VARIANT]", 1)
+  if args.len notin 2 .. 6:
+    quit("usage: export_posttrain OUTPUT EPISODES [FIRST_SEED] [VARIANT] [PROMPT_VARIANT] [PROMPT_SEED]", 1)
   let output = args[0]
   let episodes = parseInt(args[1])
   let firstSeed = if args.len >= 3: parseInt(args[2]) else: 1
-  let variant = if args.len == 4: args[3] else: "default"
+  let variant = if args.len >= 4: args[3] else: "default"
+  var promptConfig = newJObject()
+  if args.len >= 5: promptConfig["promptVariant"] = %args[4]
+  if args.len == 6: promptConfig["promptSeed"] = %parseInt(args[5])
+  let configured = promptSelection(promptConfig)
+  if configured.selectedVariant in {pvHeldoutBriefing, pvHeldoutReference}:
+    quit("held-out wording cannot enter training sources", 1)
   if episodes < 10 or firstSeed < 1:
     quit("at least ten episodes and a positive first seed are required", 1)
   if variant notin Variants:
@@ -34,13 +40,19 @@ when isMainModule:
     trainRows: seq[string]
     validationRows: seq[string]
     runs = newJArray()
+  var wordingCounts: array[2, int]
   for seed in firstSeed ..< firstSeed + episodes:
+    var selection = configured
+    let splitIndex = ord(seed mod 5 == 0)
+    if selection.variant == pvMixed: selection.seed += wordingCounts[splitIndex]
+    inc wordingCounts[splitIndex]
     var config = defaultGameConfig()
     config.update($variantConfig)
     config.seed = seed
     var sim = initSimServer(config)
     sim.gameEventLoggingEnabled = false
     var engine = initDecisionEngine(sim)
+    engine.promptSelection = selection
     var
       previous: seq[InputState]
       rows: seq[string]
@@ -65,8 +77,11 @@ when isMainModule:
         if sim.gameTicksElapsed() mod config.turnTicks == 0 and
             turnKey != lastTurnKey:
           lastTurnKey = turnKey
+          var views: seq[string]
           for seat in 0 ..< config.numAgents:
-            let view = engine.seatViewJson(sim, seat, turn, turnsPerBattle)
+            views.add(engine.seatViewJson(sim, seat, turn, turnsPerBattle))
+          for seat in 0 ..< config.numAgents:
+            let view = views[seat]
             let teacher = engine.focusfireFor(sim, sim.commandedCogs(seat))
             let record = teacher.directiveRecord(sim.gameIndex + 1, turn, seat,
               sim.aliasOfCog(seat), roleText(config.roleOfCog(seat)))
@@ -80,14 +95,19 @@ when isMainModule:
             doAssert parsed.directiveRecord(sim.gameIndex + 1, turn, seat,
               sim.aliasOfCog(seat), roleText(config.roleOfCog(seat)))["cogs"] ==
               completion["cogs"]
+            let system = systemPrompt(selection)
+            let user = userMessage(OperatorPrompt, view)
             rows.add($(%*{
-              "episode_id": "smac-starcraft-micro-" & variant & "-" & $seed,
-              "seed": "smac-starcraft-micro-" & variant & "-" & $seed,
+              "episode_id": "smac-starcraft-micro-" & variant & "-" & $seed & "-" &
+                $selection.variant & "-" & $selection.selectedVariant & "-" & $selection.seed,
+              "seed": "smac-starcraft-micro-" & $seed,
+              "scenario_family": "smac-starcraft-micro-" & $seed,
+              "prompt_template": promptMetadata(selection, system, user),
               "decision_id": (sim.gameIndex * 1000 + turn) *
                 config.numAgents + seat,
               "prompt": [
-                {"role": "system", "content": SystemPrompt},
-                {"role": "user", "content": userMessage(OperatorPrompt, view)}
+                {"role": "system", "content": system},
+                {"role": "user", "content": user}
               ],
               "completion": [{"role": "assistant", "content": $completion}],
               "game": "smac-starcraft-micro",

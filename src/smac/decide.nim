@@ -21,7 +21,7 @@
 import
   std/[json, math, monotimes, os, strutils, times],
   curly,
-  sim, control, directives, baselines, llm
+  sim, control, directives, baselines, llm, prompts
 
 type
   SeatPolicy* = object
@@ -34,6 +34,7 @@ type
     registered*: bool
 
   DecisionEngine* = object
+    promptSelection*: PromptSelection
     client*: LlmClient
     ctl*: ControlState
     seats*: seq[SeatPolicy]
@@ -395,7 +396,6 @@ proc turn*(
   let
     battle = sim.gameIndex + 1
     budget = initDuration(milliseconds = max(1, sim.config.turnBudgetMs))
-    turnStart = getMonoTime()
   ## Throttle state is PER TURN: a daily-token 429 on turn k says nothing
   ## about turn k+1 (the sidecar's window may have rolled), so the flag is
   ## cleared here and only suppresses this turn's retry.
@@ -461,6 +461,8 @@ proc turn*(
     engine.batchStarted = true
 
   # --- up to two PARALLEL batches ------------------------------------------
+  # Rate-limit spacing precedes the per-turn request budget.
+  let turnStart = getMonoTime()
   var attempt = 0
   while open.len > 0 and attempt < 2:
     if engine.client.disabled:
@@ -481,7 +483,7 @@ proc turn*(
           "the JSON object described above, starting with '{', with exactly " &
           "one \"cogs\" entry — your own unit.")
       let request = engine.client.requestFor(
-        SystemPrompt, userMessage(engine.seats[seat].prompt, user), seat)
+        systemPrompt(engine.promptSelection), userMessage(engine.seats[seat].prompt, user), seat)
       batch.post(request.url, request.headers, request.body, $seat)
     let started = getMonoTime()
     # curly hands the deadline to CURLOPT_TIMEOUT, whose granularity is WHOLE

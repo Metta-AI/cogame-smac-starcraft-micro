@@ -101,9 +101,9 @@ suite "engine":
     check directive.source == dsScripted
 
   test "the system prompt demands a reply beginning with a brace":
-    check "MUST begin with '{'" in SystemPrompt
-    check "target_id" in SystemPrompt
-    check "focus|attack_move|kite|hold|screen|retreat|regroup" in SystemPrompt
+    check "MUST begin with '{'" in CanonicalSystemPrompt
+    check "target_id" in CanonicalSystemPrompt
+    check "focus|attack_move|kite|hold|screen|retreat|regroup" in CanonicalSystemPrompt
 
   test "a reply naming no cog keeps last turn's directive, else focusfire's":
     ## Design §Reply schema, the `cogs` row. The reply PARSED, so this is a
