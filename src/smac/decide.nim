@@ -21,7 +21,7 @@
 import
   std/[json, math, monotimes, os, strutils, times],
   curly,
-  sim, control, directives, baselines, llm, prompts
+  sim, control, directives, baselines, llm, prompts, training_capture
 
 type
   SeatPolicy* = object
@@ -34,6 +34,7 @@ type
     registered*: bool
 
   DecisionEngine* = object
+    capture*: RuntimeCapture
     promptSelection*: PromptSelection
     client*: LlmClient
     ctl*: ControlState
@@ -53,6 +54,7 @@ type
     lastOurDead*: int
 
 proc initDecisionEngine*(sim: SimServer): DecisionEngine =
+  result.capture = newRuntimeCapture("smac-starcraft-micro", sim.config.seed)
   result.client = newLlmClient(sim.config)
   result.ctl = initControlState(sim)
   result.seats = newSeq[SeatPolicy](sim.seatCount())
@@ -415,6 +417,12 @@ proc turn*(
       echo "smac: budget guard fired at turn ", turnIndex,
         "; remaining turns play scripted"
 
+  if engine.capture != nil:
+    var observations: seq[JsonNode]
+    for seat in 0 ..< engine.seats.len:
+      observations.add(parseJson(engine.seatViewJson(sim, seat, turnIndex, turnsPerBattle)))
+    engine.capture.beginTurn(observations)
+
   # --- which seats need a call? --------------------------------------------
   var open: seq[int]
   for seat in 0 ..< engine.seats.len:
@@ -501,10 +509,14 @@ proc turn*(
     var stillOpen: seq[int]
     for position, seat in open:
       var cause = "parse_error"
+      var evidence = modelAttempt($sim.tickCount & "-" & $seat & "-" & $(attempt + 1),
+        engine.seats[seat].label, engine.client.requestedModel(), batch[position].url,
+        batch[position].body, responses[position].response, responses[position].error, latency)
       try:
         let text = engine.client.textOf(
           responses[position].response, responses[position].error,
           batch[position].url)
+        evidence.response = %text
         let commanded = sim.commandedCogs(seat)
         var ids: seq[string]
         for cogIndex in commanded:
@@ -546,15 +558,23 @@ proc turn*(
             break
         let hadPrevious = seat < engine.haveDirective.len and
           engine.haveDirective[seat]
+        evidence.parsedAction = directive.actionJson()
+        var completeModelOrder = directive.orders.len > 0
+        for order in directive.orders:
+          if not order.fromReply: completeModelOrder = false
         engine.repairMissingOrders(sim, seat, directive)
         engine.directives[seat] = directive
         engine.haveDirective[seat] = true
+        evidence.accepted = completeModelOrder and evidence.parsedAction == directive.actionJson()
+        if not evidence.accepted:
+          evidence.rejectionReason = some("engine repaired missing orders")
         if not namedCog:
           echo "smac llm: seat ", seat,
             " repaired: reply named no commanded cog; kept ",
             (if hadPrevious: "last turn's directive"
              else: "focusfire's directive"), " on turn ", turnIndex
       except CatchableError as error:
+        evidence.rejectionReason = some(error.msg)
         if responses[position].error.len > 0:
           cause = (if "timeout" in responses[position].error.toLowerAscii():
                      "timeout" else: "transport_error")
@@ -575,6 +595,7 @@ proc turn*(
           (if attempt == 0: " failed, will retry: "
            else: " failed, no attempt left: "), error.msg
         stillOpen.add(seat)
+      engine.capture.recordAttempt(seat, evidence)
     open = stillOpen
     inc attempt
     if engine.client.throttled and open.len > 0:
@@ -603,3 +624,10 @@ proc turn*(
     ## "falling back" is the phrase phase 60 greps the GAME log for.
     echo "smac llm: seat ", seat, " falling back to focusfire (", cause,
       ") on turn ", turnIndex
+
+  for seat in 0 ..< engine.seats.len:
+    let origin = if engine.directives[seat].source == dsLlm: aoModel
+      elif engine.directives[seat].source == dsScripted and engine.seats[seat].registered: aoTeacher
+      else: aoFallback
+    engine.capture.applied(seat, sim.tickCount, engine.directives[seat].actionJson(), origin,
+      if origin == aoTeacher: "scripted-" & $engine.seats[seat].baseline else: "engine-smac-starcraft-micro-fallback")
