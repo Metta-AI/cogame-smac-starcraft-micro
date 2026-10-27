@@ -376,3 +376,15 @@ proc boundedDirectiveRecord*(
   # a few hundred runes of fixed structure. Never cut the SERIALIZED string —
   # that would emit broken JSON, which is the exact failure the rune rule
   # exists to prevent.
+
+proc actionJson*(directive: SquadDirective): JsonNode =
+  ## The macro the controller receives, excluding spectator and transport metadata.
+  var cogs = newJArray()
+  for order in directive.orders:
+    var item = %*{"id": order.id, "intent": $order.intent,
+      "target": [order.targetX, order.targetY]}
+    item["face"] = if order.hasFace: %[order.faceX, order.faceY] else: newJNull()
+    item["target_id"] = if order.targetId > 0: %order.targetId else: newJNull()
+    item["say"] = %order.say
+    cogs.add(item)
+  %*{"note": directive.note, "cogs": cogs}
