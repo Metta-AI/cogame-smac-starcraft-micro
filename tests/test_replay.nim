@@ -149,6 +149,14 @@ suite "replay":
       # The re-derived sim really crossed all three battle boundaries.
       check run.sim.battleIndex == 3
       check run.sim.battlesWon == recorded.battlesWon
+      # Score bookkeeping is not hashed; verify the complete results separately.
+      check run.sim.battleLog.len == recorded.battleLog.len
+      var derivedResults = parseJson(run.sim.microResultsJson())
+      var recordedResults = parseJson(recorded.microResultsJson())
+      # This fixture omits policy registration; playback uses config names.
+      derivedResults.delete("names")
+      recordedResults.delete("names")
+      check derivedResults == recordedResults
       removeFile(path)
     finally:
       setCurrentDir(previous)
