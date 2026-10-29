@@ -571,6 +571,10 @@ proc stepReplay*(replay: var ReplayPlayer, sim: var SimServer) =
   replay.clearReplayPressedMasks()
   replay.checkReplayHash(sim)
   if battleEnded:
+    # The live server banks non-hashed score and seat counters before advancing.
+    # Hash equality alone cannot detect missing battle accounting in playback.
+    if sim.config.maxGames > 0:
+      sim.archiveBattle()
     ## The micro battle switch is HASHED (battleIndex), and the live loop
     ## writes the ending tick's hash before making it — so it is mirrored HERE,
     ## after that tick's hash check, by the same proc the server calls
